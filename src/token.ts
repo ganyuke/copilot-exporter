@@ -166,51 +166,109 @@ type ActiveAccountFilters = {
     tenantId: string;
 }
 
-export const getAccessToken = () => getEncryptionCookie().then(result => {
+interface MsalIds extends ActiveAccountFilters {
+    clientId: string;
+}
+
+interface MsalAccessTokenEntry {
+  homeAccountId: string;         // Usually "<uid>.<utid>"
+  credentialType: "AccessToken"; // Always this for access tokens
+  secret: string;                // The actual bearer token
+  cachedAt: string;              // Unix timestamp in seconds (as string)
+  expiresOn: string;             // Unix timestamp in seconds (as string)
+  extendedExpiresOn?: string;   // Optional fallback expiry
+  environment: string;          // e.g. "login.windows.net"
+  clientId: string;             // Azure AD application ID (MSAL clientId)
+  realm: string;                // Azure AD tenant ID
+  target: string;               // Space-separated list of scopes
+  tokenType: "Bearer";          // Usually always "Bearer"
+}
+
+
+export const getMsalIds = (): MsalIds => {
     // get M365 Copilot's client ID from the `window` variable 
-    const clientId = (unsafeWindow as any)?.msal?.clientIds?.[0] as string | undefined;
-    if (!clientId) {
-        throw Error("No client ID found for Copilot application");
-    }
+    // const clientId = (unsafeWindow as any)?.msal?.clientIds?.[0] as string | undefined;
+    const clientId = "c0ab8ce9-e9a0-42e7-b064-33d422df41f1" // harcoded M365 Copilot Chat UUID
+
     // there should be a localstorage key containing the logged in account IDs
     // profile id (https://graph.microsoft.com/v1.0/me)
     // org id (https://graph.microsoft.com/v1.0/organization)
-    const accountIdsKey = `msal.${clientId}.active-account-filters`;
+    // officeweb has a different clientId than Copilot Chat
+    const currentClientId = (unsafeWindow as any)?.msal?.clientIds?.[0] as string | undefined;
+    if (!currentClientId) {
+        throw Error("No client ID found for Copilot application");
+    }
+    const accountIdsKey = `msal.${currentClientId}.active-account-filters`;
     const accountIdsItem = localStorage.getItem(accountIdsKey);
     if (!accountIdsItem) {
         throw Error("No account ids found for Copilot application");
     }
     const accountIds = JSON.parse(accountIdsItem) as ActiveAccountFilters;
-    const { homeAccountId, tenantId } = accountIds;
+    return {
+        clientId,
+        ...accountIds
+    }
+}
+
+export const getAccessToken = async (msalIds: MsalIds): Promise<string> => {
+    const encryptionCookie = await getEncryptionCookie();
+    const { homeAccountId, tenantId, clientId } = msalIds;
 
     // the M365 Copilot uses the access token stored in LocalStorage with these scopes
     const SCOPES = [
-        "https://substrate.office.com/activityfeed-internal.readwrite",
-        "https://substrate.office.com/context.read",
-        "https://substrate.office.com/files.read",
-        "https://substrate.office.com/files.readwrite",
-        "https://substrate.office.com/files.readwrite.shared",
-        "https://substrate.office.com/group.readwrite.all",
-        "https://substrate.office.com/notes.readwrite",
-        "https://substrate.office.com/officefeed-internal.readwrite",
-        "https://substrate.office.com/peoplepredictions-internal.read",
-        "https://substrate.office.com/roamingusersettings.readwrite",
-        "https://substrate.office.com/signals-internal.readwrite",
-        "https://substrate.office.com/substratesearch-internal.readwrite",
-        "https://substrate.office.com/usersettings.read",
-        "https://substrate.office.com/usersettings.readwrite",
-        "https://substrate.office.com/.default"
-    ]
+      "https://substrate.office.com/sydney/.default"
+    ];
     const ACCESS_TOKEN_LS = `${homeAccountId}-login.windows.net-accesstoken-${clientId}-${tenantId}-${SCOPES.join(" ")}--`
     const lskv = localStorage.getItem(ACCESS_TOKEN_LS);
     if (!lskv) {
         throw Error("missing access token localstorage")
     }
     const payload = JSON.parse(lskv) as EncryptedData;
-    return decrypt(
-        result.key,
+    const decryptedData = await decrypt(
+        encryptionCookie.key,
         payload.nonce,
         clientId, // context is usually client ID according to MSAL v4 source code: https://github.com/AzureAD/microsoft-authentication-library-for-js/blob/afeaeddc777577b1b16f0084f5e5f9e4c15ee5e9/lib/msal-browser/src/cache/LocalStorage.ts#L302
         payload.data
-    )
-});
+    );
+    const parsedDecryptedData = JSON.parse(decryptedData) as MsalAccessTokenEntry;
+    return parsedDecryptedData.secret;
+};
+
+export async function findCopilotAccessTokens(clientId: string): Promise<MsalAccessTokenEntry[]> {
+  const results: MsalAccessTokenEntry[] = [];
+  const encryptionCookie = await getEncryptionCookie();
+
+  for (const key of Object.keys(localStorage)) {
+    if (!key.includes("-accesstoken-")) continue;
+
+    const raw = localStorage.getItem(key);
+    if (!raw) continue;
+
+    try {
+      const enc = JSON.parse(raw);
+      if (enc?.id !== encryptionCookie.id) continue; // skip keys from old sessions
+
+    //   const context = key.includes(clientId) ? clientId : "";
+      const decryptedStr = await decrypt(
+        encryptionCookie.key,
+        enc.nonce,
+        clientId,
+        enc.data
+      );
+
+      const parsed = JSON.parse(decryptedStr) as MsalAccessTokenEntry;
+
+      if (
+        parsed.tokenType === "Bearer"// &&
+        // parsed.target.includes("substrate.office.com")
+      ) {
+        results.push(parsed);
+      }
+    } catch (err) {
+      console.warn(`Failed to decrypt key ${key}:`, err);
+      continue;
+    }
+  }
+
+  return results;
+}

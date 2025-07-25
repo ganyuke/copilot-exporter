@@ -4,10 +4,9 @@ export async function fetchCopilotChats(
   tenantId: string,
   variants: string = 'feature.EnableLastMessageForGetChats,feature.EnableMRUAgents,feature.EnableHasLoopPages'
 ) {
-  const traceId = crypto.randomUUID().toUpperCase();          // UUID with spaces (we'll insert manually)
   const requestObj = {
     source: "officeweb",
-    traceId: traceId.replace(/-/g, " "),                      // Add spaces to UUID for this param
+    traceId: crypto.randomUUID(), // uuid with spaces
     threadType: "webchat",
     MaxReturnedChatsCount: 40
   };
@@ -21,19 +20,28 @@ export async function fetchCopilotChats(
     "authorization": `Bearer ${token}`,
     "content-type": "application/json",
     "x-anchormailbox": `Oid:${userOid}@${tenantId}`,
-    "x-clientrequestid": crypto.randomUUID(),                // UUID without spaces
+    "x-clientrequestid": crypto.randomUUID().replace(/-/g, ""), // uuid *without* spaces
     "x-routingparameter-sessionkey": userOid,
     "x-scenario": "OfficeWebIncludedCopilot",
     "x-variants": variants
   };
 
+  console.log(token, userOid, tenantId, variants)
+  console.log(url)
+  console.log(headers)
+
+//   const res = {
+//     ok: false,
+//     status: 418,
+//     json: () => {},
+//   };
   const res = await fetch(url, {
     method: "GET",
-    headers,
-    referrer: "https://m365.cloud.microsoft/"
+    headers
   });
 
   if (!res.ok) {
+    console.log(res)
     throw new Error(`Fetch failed with status ${res.status}`);
   }
 
@@ -70,8 +78,7 @@ export async function fetchCopilotConversation(
 
   const response = await fetch(url, {
     method: "GET",
-    headers,
-    referrer: "https://m365.cloud.microsoft/"
+    headers
   });
 
   if (!response.ok) {
