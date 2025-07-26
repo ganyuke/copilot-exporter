@@ -1,13 +1,18 @@
 {
+  "title": "M365 Copilot Exporter",
   "name": "@ganyuke/copilot-exporter",
+  "description": "An exporter for the Copilot Chat integrated into the M365 dashboard.",
   "author": {
     "name": "ganyuke"
   },
+  "version": "1.1.0",
   "license": "MIT",
   "private": true,
-  "version": "1.0.0",
-  "title": "M365 Copilot Exporter",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ganyuke/copilot-exporter.git"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

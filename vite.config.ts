@@ -11,6 +11,7 @@ export default defineConfig({
         icon: 'https://upload.wikimedia.org/wikipedia/commons/0/0e/Microsoft_365_%282022%29.svg',
         namespace: packageJson.author.name,
         name: packageJson.title,
+        description: packageJson.description,
         match: ['https://m365.cloud.microsoft/', 'https://m365.cloud.microsoft/chat/*'],
         'run-at': 'document-end'
       },

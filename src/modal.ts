@@ -1,5 +1,5 @@
 import { fetchCopilotChats } from "./api";
-import { exportAllDirect } from "./expoter";
+import { deleteBulk, exportBulkDirect } from "./expoter";
 import { APP_TAG } from "./main";
 import { getAccessToken, getMsalIds } from "./token";
 
@@ -61,8 +61,8 @@ export function showExportModal() {
         <option>JSON</option>
       </select>
       <div>
-        <button id="delete-all-conversations" disabled>Delete</button>
-        <button id="export-all-conversations">Export</button>
+        <button id="delete-conversations-button">Delete</button>
+        <button id="export-conversations-button">Export</button>
       </div>
     </div>
   `;
@@ -70,7 +70,7 @@ export function showExportModal() {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    function exportChats(idsToExport: TransportObject[]) {
+    function createProgressBar(idsToExport: TransportObject[], initalString: string) {
         if (idsToExport.length < 1) {
             return;
         }
@@ -93,7 +93,7 @@ export function showExportModal() {
         progressBar.max = idsToExport.length;
         progressBar.value = 0;
         label.htmlFor = "chat-export-progress-bar";
-        titleSpan.textContent = "Exporting..."
+        titleSpan.textContent = initalString;
         progressTextSpan.textContent = `0/${idsToExport.length}`
         label.append(titleSpan, progressTextSpan);
         progressBarContainer.append(label, progressBar);
@@ -111,8 +111,7 @@ export function showExportModal() {
             };
         }
 
-        exportAllDirect(idsToExport.map((obj) => obj.id), progressUpdater);
-
+        return progressUpdater;
     }
 
     async function fetchChats() {
@@ -151,21 +150,47 @@ export function showExportModal() {
             });
         });
 
-        const exportAll = document.getElementById("export-all-conversations")! as HTMLButtonElement;
-        exportAll.addEventListener("click", () => {
-            const checkboxes = document.querySelectorAll('#chatList input[type="checkbox"]:checked') as NodeListOf<HTMLInputElement>;
-            const listToExport: TransportObject[] = [];
-            checkboxes.forEach((c) => {
-                const uuid = c.dataset["id"]!;
-                const title = c.dataset["title"]!;
-                listToExport.push({
-                    id: uuid,
-                    title: title,
-                })
-            });
-            exportChats(listToExport);
-        })
     }
+
+    function getSelectedChats(): TransportObject[] {
+        const checkboxes = document.querySelectorAll('#chatList input[type="checkbox"]:checked') as NodeListOf<HTMLInputElement>;
+        const listToExport: TransportObject[] = [];
+        checkboxes.forEach((c) => {
+            const uuid = c.dataset["id"]!;
+            const title = c.dataset["title"]!;
+            listToExport.push({
+                id: uuid,
+                title: title,
+            })
+        });
+        return listToExport;
+    }
+
+    function exportChats() {
+        const idsToExport = getSelectedChats();
+        const progressUpdater = createProgressBar(idsToExport, "Exporting...");
+        if (!progressUpdater) {
+            return;
+        }
+        exportBulkDirect(idsToExport.map((obj) => obj.id), progressUpdater);
+    }
+
+    function deleteChats() {
+        const idsToDelete = getSelectedChats();
+        const progressUpdater = createProgressBar(idsToDelete, "Deleting...");
+        if (!progressUpdater) {
+            return;
+        }
+        deleteBulk(idsToDelete.map((obj) => obj.id), progressUpdater);
+    }
+
+    // hook up export button
+    const exportBtn = document.getElementById("export-conversations-button")! as HTMLButtonElement;
+    exportBtn.addEventListener("click", exportChats)
+
+    // hook up delete button
+    const deleteBtn = document.getElementById("delete-conversations-button")! as HTMLButtonElement;
+    deleteBtn.addEventListener("click", deleteChats)
 
     // hook up refetch button
     const refetchButton = document.getElementById("conversation-refetch")! as HTMLButtonElement;

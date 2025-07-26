@@ -1,8 +1,6 @@
+
 // JSON stored under the "identity" div in the M365 dashboard
-
-import { APP_TAG } from "./main";
-
-// (https://m365.cloud.microsoft)
+// https://m365.cloud.microsoft)
 type MSALIdentity = {
     encryptionConfig: {
         cryptoKey: {
@@ -33,6 +31,7 @@ type MSALIdentity = {
     userDisplayName: string // user's full name
 }
 
+// there is a LocalStoage item with these fields
 type ActiveAccountFilters = {
     homeAccountId: string;
     localAccountId: string;
@@ -43,10 +42,11 @@ interface MsalIds extends ActiveAccountFilters {
     clientId: string;
 }
 
+// this is just whatever was stored in the LocalStorage item
 interface MsalAccessTokenEntry {
     homeAccountId: string;         // Usually "<uid>.<utid>"
     credentialType: "AccessToken"; // Always this for access tokens
-    secret: string;                // The actual bearer token
+    secret: string;                // The actual JWT for bearer token
     cachedAt: string;              // Unix timestamp in seconds (as string)
     expiresOn: string;             // Unix timestamp in seconds (as string)
     extendedExpiresOn?: string;   // Optional fallback expiry
@@ -298,7 +298,7 @@ export const getAccessToken = async (msalIds: MsalIds): Promise<string> => {
     return parsedDecryptedData.secret;
 };
 
-export async function findCopilotAccessTokens(clientId: string): Promise<MsalAccessTokenEntry[]> {
+/*export async function findCopilotAccessTokens(clientId: string): Promise<MsalAccessTokenEntry[]> {
     const results: MsalAccessTokenEntry[] = [];
     const encryptionCookie = await getEncryptionCookie();
 
@@ -335,4 +335,4 @@ export async function findCopilotAccessTokens(clientId: string): Promise<MsalAcc
     }
 
     return results;
-}
+}*/

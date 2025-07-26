@@ -1,13 +1,15 @@
 // ==UserScript==
-// @name       M365 Copilot Exporter
-// @namespace  ganyuke
-// @version    1.0.0
-// @author     ganyuke
-// @license    MIT
-// @icon       https://upload.wikimedia.org/wikipedia/commons/0/0e/Microsoft_365_%282022%29.svg
-// @match      https://m365.cloud.microsoft/
-// @match      https://m365.cloud.microsoft/chat/*
-// @run-at     document-end
+// @name         M365 Copilot Exporter
+// @namespace    ganyuke
+// @version      1.1.0
+// @author       ganyuke
+// @description  An exporter for the Copilot Chat integrated into the M365 dashboard.
+// @license      MIT
+// @icon         https://upload.wikimedia.org/wikipedia/commons/0/0e/Microsoft_365_%282022%29.svg
+// @source       https://github.com/ganyuke/copilot-exporter.git
+// @match        https://m365.cloud.microsoft/
+// @match        https://m365.cloud.microsoft/chat/*
+// @run-at       document-end
 // ==/UserScript==
 
 (function () {
@@ -94,6 +96,8 @@
       headers
     });
     if (!res.ok) {
+      console.debug(res);
+      console.debug(res.body);
       throw new Error(`Fetch failed with status ${res.status}`);
     }
     const data = await res.json();
@@ -122,9 +126,40 @@
       headers
     });
     if (!response.ok) {
+      console.debug(response);
+      console.debug(response.body);
       throw new Error(`Fetch failed with status ${response.status}`);
     }
     return await response.blob();
+  }
+  async function deleteCopilotConversation(token, userOid, tenantId, conversationIds) {
+    const requestObj = {
+      conversationIdsToDelete: conversationIds,
+      source: "officeweb",
+      traceId: crypto.randomUUID()
+      // honestly don't really know the pattern whith these uuids...
+    };
+    const encodedRequest = JSON.stringify(requestObj);
+    const url = `https://substrate.office.com/m365Copilot/DeleteConversation`;
+    const headers = {
+      "authorization": `Bearer ${token}`,
+      "content-type": "application/json",
+      "x-anchormailbox": `Oid:${userOid}@${tenantId}`,
+      "x-clientrequestid": crypto.randomUUID(),
+      "x-routingparameter-sessionkey": userOid,
+      "x-scenario": "OfficeWebIncludedCopilot"
+    };
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: encodedRequest
+    });
+    if (!response.ok) {
+      console.debug(response);
+      console.debug(response.body);
+      throw new Error(`Fetch failed with status ${response.status}`);
+    }
+    return;
   }
   function downloadBlobAsFile(blob, filename) {
     const url = URL.createObjectURL(blob);
@@ -255,20 +290,33 @@
     const parsedDecryptedData = JSON.parse(decryptedData);
     return parsedDecryptedData.secret;
   };
-  async function exportAllDirect(conversationIds, callback) {
+  const FETCH_DELAY = 1500;
+  async function getTokenAndIds() {
     console.log(`${APP_TAG} Getting MSAL ids...`);
     const msalIds = getMsalIds();
     console.log(`${APP_TAG} Getting access token...`);
     const accessToken = await getAccessToken(msalIds);
-    const delay = 1500;
+    return {
+      token: accessToken,
+      ...msalIds
+    };
+  }
+  async function exportBulkDirect(conversationIds, callback) {
+    const { token, localAccountId, tenantId } = await getTokenAndIds();
     for (let i = 0; i < conversationIds.length; i++) {
       const conversationId = conversationIds[i];
-      const blob = await fetchCopilotConversation(accessToken, msalIds.localAccountId, msalIds.tenantId, conversationId);
+      const blob = await fetchCopilotConversation(token, localAccountId, tenantId, conversationId);
       console.log(`${APP_TAG} Completed download for conversation ${conversationId}`);
       callback(i);
       downloadBlobAsFile(blob, `m365-copilot-${conversationId}.json`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      await new Promise((resolve) => setTimeout(resolve, FETCH_DELAY));
     }
+  }
+  async function deleteBulk(conversationIds, callback) {
+    const { token, localAccountId, tenantId } = await getTokenAndIds();
+    await deleteCopilotConversation(token, localAccountId, tenantId, conversationIds);
+    callback(conversationIds.length - 1);
+    console.log(`${APP_TAG} Completed deletion for conversations ${conversationIds.join()}`);
   }
   function showExportModal() {
     if (document.getElementById("copilotExportOverlay")) return;
@@ -313,14 +361,14 @@
         <option>JSON</option>
       </select>
       <div>
-        <button id="delete-all-conversations" disabled>Delete</button>
-        <button id="export-all-conversations">Export</button>
+        <button id="delete-conversations-button">Delete</button>
+        <button id="export-conversations-button">Export</button>
       </div>
     </div>
   `;
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
-    function exportChats(idsToExport) {
+    function createProgressBar(idsToExport, initalString) {
       if (idsToExport.length < 1) {
         return;
       }
@@ -341,7 +389,7 @@
       progressBar.max = idsToExport.length;
       progressBar.value = 0;
       label.htmlFor = "chat-export-progress-bar";
-      titleSpan.textContent = "Exporting...";
+      titleSpan.textContent = initalString;
       progressTextSpan.textContent = `0/${idsToExport.length}`;
       label.append(titleSpan, progressTextSpan);
       progressBarContainer.append(label, progressBar);
@@ -356,7 +404,7 @@
           }, 3e3);
         }
       };
-      exportAllDirect(idsToExport.map((obj) => obj.id), progressUpdater);
+      return progressUpdater;
     }
     async function fetchChats() {
       const inputNumber = document.getElementById("conversation-fetch-list-max");
@@ -389,21 +437,40 @@
           cb.checked = selectAll.checked;
         });
       });
-      const exportAll = document.getElementById("export-all-conversations");
-      exportAll.addEventListener("click", () => {
-        const checkboxes = document.querySelectorAll('#chatList input[type="checkbox"]:checked');
-        const listToExport = [];
-        checkboxes.forEach((c) => {
-          const uuid = c.dataset["id"];
-          const title = c.dataset["title"];
-          listToExport.push({
-            id: uuid,
-            title
-          });
-        });
-        exportChats(listToExport);
-      });
     }
+    function getSelectedChats() {
+      const checkboxes = document.querySelectorAll('#chatList input[type="checkbox"]:checked');
+      const listToExport = [];
+      checkboxes.forEach((c) => {
+        const uuid = c.dataset["id"];
+        const title = c.dataset["title"];
+        listToExport.push({
+          id: uuid,
+          title
+        });
+      });
+      return listToExport;
+    }
+    function exportChats() {
+      const idsToExport = getSelectedChats();
+      const progressUpdater = createProgressBar(idsToExport, "Exporting...");
+      if (!progressUpdater) {
+        return;
+      }
+      exportBulkDirect(idsToExport.map((obj) => obj.id), progressUpdater);
+    }
+    function deleteChats() {
+      const idsToDelete = getSelectedChats();
+      const progressUpdater = createProgressBar(idsToDelete, "Deleting...");
+      if (!progressUpdater) {
+        return;
+      }
+      deleteBulk(idsToDelete.map((obj) => obj.id), progressUpdater);
+    }
+    const exportBtn = document.getElementById("export-conversations-button");
+    exportBtn.addEventListener("click", exportChats);
+    const deleteBtn = document.getElementById("delete-conversations-button");
+    deleteBtn.addEventListener("click", deleteChats);
     const refetchButton = document.getElementById("conversation-refetch");
     refetchButton.addEventListener("click", fetchChats);
     fetchChats();

@@ -1,16 +1,18 @@
 # M365 Copilot Exporter
-An exporter for the Copilot Chat integrated into the [M365 dashboard](https://m365.cloud.microsoft/chat/).
+An exporter for Microsoft 365 Copilot Chat integrated into the [Microsoft 365 dashboard](https://m365.cloud.microsoft/chat/).
 
 Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh)'s [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter). This userscript is not 1:1 in functionality, though!
+
+> [!CAUTION]
+> This tool is maintained on a "when I feel like it" basis. Use at your own risk!
 
 ## Features
 - View list of Copilot conversations.
 - Bulk export Copilot conversations as its raw, internal JSON format.
+- Bulk deletion of Copilot conversations.
 
 Compared to ChatGPT Exporter, it does **not** support:
-- Bulk deletion (the "Delete" button in my modal is a lie!!!).
-- Exporting in formats OTHER than the official JSON.
-  - If you want to do this, I suppose you could convert Copilot's JSON to ChatGPT's, then shove it into ChatGPT Exporter.
+- Exporting in formats OTHER than the official JSON. If you want to do this, I suppose you could convert Copilot's JSON to ChatGPT's, then shove it into ChatGPT Exporter.
 
 ## How to use
 1. Copy or import [`dist/copilot-exporter.user.js`](https://github.com/ganyuke/copilot-exporter/blob/master/dist/copilot-exporter.user.js) into your desired userscript manager. I recommend [Greasemonkey](https://addons.mozilla.org/en-US/firefox/addon/greasemonkey/)!

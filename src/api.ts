@@ -163,6 +163,8 @@ export async function fetchCopilotChats(
     });
 
     if (!res.ok) {
+        console.debug(res)
+        console.debug(res.body)
         throw new Error(`Fetch failed with status ${res.status}`);
     }
 
@@ -201,10 +203,53 @@ export async function fetchCopilotConversation(
     });
 
     if (!response.ok) {
+        console.debug(response)
+        console.debug(response.body)
         throw new Error(`Fetch failed with status ${response.status}`);
     }
 
-    // console.log(response)
-
     return await response.blob();
+}
+
+export async function deleteCopilotConversation(
+    token: string,
+    userOid: string,
+    tenantId: string,
+    conversationIds: string[]
+) {
+    // fun fact: sending just `deleteConversationType: 1` instead will delete EVERYTHING.
+    // well, at least, according to the POSTs sent by the M365 privacy dashboard
+    // (https://myaccount.microsoft.com/settingsandprivacy/privacy)
+    const requestObj = {
+        conversationIdsToDelete: conversationIds,
+        source: "officeweb",
+        traceId: crypto.randomUUID(), // honestly don't really know the pattern whith these uuids...
+    }
+
+    const encodedRequest = JSON.stringify(requestObj);
+
+    const url = `https://substrate.office.com/m365Copilot/DeleteConversation`;
+
+    const headers = {
+        "authorization": `Bearer ${token}`,
+        "content-type": "application/json",
+        "x-anchormailbox": `Oid:${userOid}@${tenantId}`,
+        "x-clientrequestid": crypto.randomUUID(), 
+        "x-routingparameter-sessionkey": userOid,
+        "x-scenario": "OfficeWebIncludedCopilot"
+    };
+
+    const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: encodedRequest,
+    });
+
+    if (!response.ok) {
+        console.debug(response)
+        console.debug(response.body)
+        throw new Error(`Fetch failed with status ${response.status}`);
+    }
+
+    return;
 }
