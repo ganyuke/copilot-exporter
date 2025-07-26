@@ -1,4 +1,69 @@
-type CopilotMessage = {
+/*type CopilotMessage = {
+  text: string;
+  author: string; // either "bot" or "user"
+  createdAt: string; // ISO-8601 timestamp
+  timestamp: string; // ISO-8601 timestamp
+  messageId: string; // uuid
+  requestId: string; // uuid
+  offense: string; // "None"
+  sourceAttributions: {
+    sourceType: string; // "CITATION"
+    providerDisplayName: string;
+    referenceMetadata: string; // JSON string
+    isCitedInResponse: string; // boolean string
+    imageLink: string; // url
+    imageWidth: string; // number string
+    imageHeight: string; // number string
+    imageFavicon: string; // base64
+    searchQuery: string;
+    videoTimeLength: string;
+    videoDAPublicationDate: string;
+    videoViewCount: string;
+    seeMoreUrl: string // url
+  }[],
+  contentOrigin: string; // "DeepLeo", "officeweb"
+  turnCount: number; // index of message in conversation
+  storageMessageId: string; // 13-number string  0: "text"
+}
+
+type CopilotBotMessage = CopilotMessage & {
+  adaptiveCards: {
+    type: string;
+    version: string;
+    body: {
+      type: string;
+      text: string;
+      wrap: boolean;
+    }[];
+  }[];
+  scores: {
+    component: string; // "BotOffense"
+    score: number; // decimal of 0.(9-11 numbers)
+  }[];
+  spokenText: string; // looks empty?
+}
+
+type CopilotUserMessage = CopilotMessage & {
+  from: {
+    id: string; // uuid
+  };
+  local: string; // locale string "en-US"
+  market: string; // locale stirng "en-us"
+  region: string; // locale string "us"
+  locationInfo: {
+    country: string; // "United States"
+    state: string;
+    city: string;
+    timeZone: string; // Atlantic/Reykjavik
+    timeZoneOffset: number;
+    sourceType: number;
+  };
+  inputMethod: string; // "Keyboard"
+  entityAnnotationTypes: string[]; // "People", "File", etc.
+}*/
+
+// bot messages in `/GetChats` have scores
+type CopilotOverviewMessage = {
   text: string;
   author: string; // either "bot" or "user"
   responseIdentifier: string;
@@ -45,7 +110,7 @@ type CopilotConversationOverview = {
   retentionPolicyEffect: number;
   threadId: string;
   isScheduledPromptThread: boolean;
-  lastMessage: CopilotMessage;
+  lastMessage: CopilotOverviewMessage;
   mostRecentGptIds: []; // not sure
   hasLoopPages: boolean;
   isLegacyWebChat: boolean;
@@ -92,22 +157,12 @@ export async function fetchCopilotChats(
     "x-variants": variants
   };
 
-  console.log(token, userOid, tenantId, variants)
-  console.log(url)
-  console.log(headers)
-
-//   const res = {
-//     ok: false,
-//     status: 418,
-//     json: () => {},
-//   };
   const res = await fetch(url, {
     method: "GET",
     headers
   });
 
   if (!res.ok) {
-    console.log(res)
     throw new Error(`Fetch failed with status ${res.status}`);
   }
 
@@ -121,23 +176,21 @@ export async function fetchCopilotConversation(
   tenantId: string,
   conversationId: string
 ) {
-  const traceId = crypto.randomUUID().replace(/-/g, ''); // UUID without spaces
-
   const requestObj = {
     conversationId,
     source: "officeweb",
-    traceId
+    traceId: crypto.randomUUID().replace(/-/g, ""), // uuid *without* spaces (for some reason??)
   };
 
   const encodedRequest = encodeURIComponent(JSON.stringify(requestObj));
 
-  const url = `https://substrate.office.com/m365Copilot/GetChats?request=${encodedRequest}`;
+  const url = `https://substrate.office.com/m365Copilot/GetConversation?request=${encodedRequest}`;
 
   const headers = {
     "authorization": `Bearer ${token}`,
     "content-type": "application/json",
     "x-anchormailbox": `Oid:${userOid}@${tenantId}`,
-    "x-clientrequestid": crypto.randomUUID().replace(/-/g, ''), // also UUID w/o spaces
+    "x-clientrequestid": crypto.randomUUID().replace(/-/g, ""), // also UUID w/o spaces
     "x-routingparameter-sessionkey": userOid,
     "x-scenario": "OfficeWebIncludedCopilot"
   };

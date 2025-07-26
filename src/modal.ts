@@ -94,12 +94,19 @@ export function showExportModal() {
         progressBarContainer.append(label, progressBar);
         modal.append(progressBarContainer);
 
-        exportAllDirect(idsToExport.map((obj) => obj.id), (progress: number) => {
-            console.log("exported " + idsToExport[progress].id);
+        const progressUpdater = (progress: number) => {
             titleSpan.textContent = idsToExport[progress].title;
             progressTextSpan.textContent = `${progress + 1}/${idsToExport.length}`;
             progressBar.value = progress + 1;
-        })     
+
+            if (progressBar.value === progressBar.max) {
+                setTimeout(() => {
+                    progressBarContainer.remove();
+                }, 3000);
+            };
+        }
+
+        exportAllDirect(idsToExport.map((obj) => obj.id), progressUpdater);
 
     }
 
@@ -113,8 +120,6 @@ export function showExportModal() {
         console.log(`${APP_TAG} Getting access token...`);
         const accessToken = await getAccessToken(msalIds);
         const copilotChatList = await fetchCopilotChats(accessToken, msalIds.localAccountId, msalIds.tenantId, maxChats);
-
-        console.log(copilotChatList);
 
         const chatList = document.getElementById('chatList')!;
         chatList.innerText = "";
