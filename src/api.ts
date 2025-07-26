@@ -1,14 +1,80 @@
+type CopilotMessage = {
+  text: string;
+  author: string; // either "bot" or "user"
+  responseIdentifier: string;
+  createdAt: string; // ISO-8601 timestamp
+  timestamp: string; // ISO-8601 timestamp
+  messageId: string; // uuid
+  requestId: string; // uuid
+  offense: string; // "None"
+  adaptiveCards: {
+    type: string;
+    version: string;
+    body: {
+      type: string;
+      text: string;
+      wrap: boolean;
+    }[];
+  }[];
+  contentOrigin: string; // "DeepLeo"
+  scores: {
+    component: string; // "BotOffense"
+    score: number; // decimal of 0.(9-11 numbers)
+  }[];
+  spokenText: string; // looks empty?
+  turnCount: number; // index of message in conversation
+  storageMessageId: string; // 13-number string
+}
+
+type CopilotConversationOverview = {
+  conversationId: string; // uuid
+  chatName: string;
+  tone: string;
+  createTimeUtc: number; // 13-number timestamp 
+  updateTimeUtc: number; // 13-number timestamp 
+  expiryTimeUtc: number; // workspace dependant?
+  plugins: {
+    id: string;
+    source: string;
+    isThirdPartyPluginSource: boolean;
+    isGraphConnectorPluginType: boolean;
+  }[];
+  threadLevelGptId: {}; // not sure
+  isMessageless: boolean;
+  isUnread: boolean;
+  retentionPolicyEffect: number;
+  threadId: string;
+  isScheduledPromptThread: boolean;
+  lastMessage: CopilotMessage;
+  mostRecentGptIds: []; // not sure
+  hasLoopPages: boolean;
+  isLegacyWebChat: boolean;
+}
+
+type CopilotChats = {
+  chats: CopilotConversationOverview[];
+  totalCountOfSavedChats: number;
+  syncState: string;
+  retentionPolicyStatus: number;
+  result: {
+    value: string;
+    message: string;
+    serviceVersion: string;
+  }
+}
+
 export async function fetchCopilotChats(
   token: string,
   userOid: string,
   tenantId: string,
+  maxChats: number,
   variants: string = 'feature.EnableLastMessageForGetChats,feature.EnableMRUAgents,feature.EnableHasLoopPages'
-) {
+): Promise<CopilotChats> {
   const requestObj = {
     source: "officeweb",
     traceId: crypto.randomUUID(), // uuid with spaces
     threadType: "webchat",
-    MaxReturnedChatsCount: 40
+    MaxReturnedChatsCount: maxChats
   };
 
   const encodedRequest = encodeURIComponent(JSON.stringify(requestObj));
@@ -45,7 +111,7 @@ export async function fetchCopilotChats(
     throw new Error(`Fetch failed with status ${res.status}`);
   }
 
-  const data = await res.json();
+  const data = await res.json() as CopilotChats;
   return data;
 }
 
@@ -85,5 +151,5 @@ export async function fetchCopilotConversation(
     throw new Error(`Fetch failed with status ${response.status}`);
   }
 
-  return await response.json();
+  return await response.blob();
 }
