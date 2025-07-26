@@ -5,15 +5,14 @@ export const APP_TAG = "[Copilot Exporter]";
 console.log(`${APP_TAG} Userscript initalized.`)
 
 const inject = () => injectExportButton(
-  () => {
-    console.log(`${APP_TAG} Export button clicked.`);
-    showExportModal();
-  }
+    () => {
+        console.log(`${APP_TAG} Export button clicked.`);
+        showExportModal();
+    }
 );
-
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', inject);
-  } else {
+} else {
     inject();
 }

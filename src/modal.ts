@@ -19,12 +19,17 @@ export function showExportModal() {
     display: flex; align-items: center; justify-content: center;
     z-index: 9999;
   `;
+
+    // allow closing the modal by
+    // clicking outside the modal
     overlay.addEventListener("click", () => {
         overlay.remove();
     })
 
     const modal = document.createElement('div');
 
+    // prevent clicking the modal
+    // itself from closing it
     modal.addEventListener("click", (e) => {
         e.stopPropagation();
     });
@@ -162,68 +167,10 @@ export function showExportModal() {
         })
     }
 
+    // hook up refetch button
     const refetchButton = document.getElementById("conversation-refetch")! as HTMLButtonElement;
-    refetchButton.addEventListener("click", fetchChats)
+    refetchButton.addEventListener("click", fetchChats);
 
+    // it looks nicer if we populate the list on load
     fetchChats();
-
-    // Simulate loading chats
-    /*setTimeout(() => {
-        const chatList = document.getElementById('chatList')!;
-
-        const chats = [
-            {
-                id: "random-uuid",
-                title: "Chat with Finance GPT",
-            },
-            {
-                id: "random-uuid-2",
-                title: "Meeting Notes: July 24",
-            },
-            {
-                id: "random-uuid-3",
-                title: "Brainstorm session",
-            }
-        ];
-
-        chatList.innerText = "";
-
-        chats.forEach((data) => {
-            const label = document.createElement("label");
-            label.style = "column-gap:0.5em;display:flex;"
-            const checkbox = document.createElement("input");
-            const span = document.createElement("span");
-            checkbox.type = "checkbox";
-            checkbox.dataset["id"] = data.id;
-            checkbox.dataset["title"] = data.title;
-            span.innerText = data.title;
-            label.append(checkbox);
-            label.append(span);
-            chatList.appendChild(label);
-        })
-
-        const selectAll = document.getElementById("selectAllCheckbox")! as HTMLInputElement;
-        selectAll.addEventListener("change", () => {
-            const checkboxes = document.querySelectorAll('#chatList input[type="checkbox"]') as NodeListOf<HTMLInputElement>;
-            checkboxes.forEach(cb => {
-                cb.checked = selectAll.checked;
-            });
-        });
-
-        const exportAll = document.getElementById("export-all-conversations")! as HTMLButtonElement;
-        exportAll.addEventListener("click", () => {
-            const checkboxes = document.querySelectorAll('#chatList input[type="checkbox"]:checked') as NodeListOf<HTMLInputElement>;
-            const listToExport: TransportObject[] = [];
-            checkboxes.forEach((c) => {
-                const uuid = c.dataset["id"]!;
-                const title = c.dataset["title"]!;
-                listToExport.push({
-                    id: uuid,
-                    title: title,
-                })
-            });
-            exportChats(listToExport);
-        });
-
-    }, 1000);*/
 }
