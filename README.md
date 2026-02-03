@@ -35,10 +35,10 @@ Copy or import [`dist/copilot-exporter.user.js`](https://github.com/ganyuke/copi
 ## How to use
 1. Navigate to your [M365 dashboard](https://m365.cloud.microsoft/chat/).
 2. Open the export menu by either:
-  - Clicking on the floating export button in the bottom right.
-  - Opening the Greasemonkey command menu and selecting "Open export menu".
+   - Clicking on the floating export button in the bottom right.
+   - Opening the Greasemonkey command menu and selecting "Open export menu".
 3. Select the conversations you want to export.
-  - If the conversation(s) you want to export are further down, alter the maximum number of conversations shown and refetch.
+   - If the conversation(s) you want to export are further down, alter the maximum number of conversations shown and refetch.
 4. Click export once you've selected the conversations you want to export.
 
 ## How to build
