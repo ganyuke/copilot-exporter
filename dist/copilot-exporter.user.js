@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         M365 Copilot Exporter
 // @namespace    ganyuke
-// @version      1.1.0
+// @version      1.2.0
 // @author       ganyuke
 // @description  An exporter for the Copilot Chat integrated into the M365 dashboard.
 // @license      MIT
@@ -9,67 +9,13 @@
 // @source       https://github.com/ganyuke/copilot-exporter.git
 // @match        https://m365.cloud.microsoft/
 // @match        https://m365.cloud.microsoft/chat/*
+// @grant        GM.registerMenuCommand
 // @run-at       document-end
 // ==/UserScript==
 
 (function () {
   'use strict';
 
-  async function hookIntoSidebar(callback) {
-    const sidebarRoot = await waitForElement('[data-testid="appbar-v2"]');
-    if (!sidebarRoot) {
-      const log = `${APP_TAG} Could not hook into sidebar root!`;
-      console.error(log);
-      throw new Error(log);
-    }
-    const observer = new MutationObserver(() => {
-      const allConversationsBtn = document.getElementById("all-history");
-      if (allConversationsBtn && allConversationsBtn.dataset.hooked !== "1") {
-        allConversationsBtn.dataset.hooked = "1";
-        createExportButton(allConversationsBtn, callback);
-      }
-    });
-    observer.observe(sidebarRoot, {
-      childList: true,
-      subtree: true
-    });
-  }
-  function waitForElement(selector, timeout = 1e4) {
-    return new Promise((resolve, reject) => {
-      const found = document.querySelector(selector);
-      if (found) return resolve(found);
-      const observer = new MutationObserver(() => {
-        const el = document.querySelector(selector);
-        if (el) {
-          observer.disconnect();
-          resolve(el);
-        }
-      });
-      observer.observe(document.body, { childList: true, subtree: true });
-      setTimeout(() => {
-        observer.disconnect();
-        reject(new Error(`Element not found for selector ${selector}`));
-      }, timeout);
-    });
-  }
-  function createExportButton(baseBtn, callback) {
-    const exportBtn = baseBtn.cloneNode(true);
-    exportBtn.id = "export-conversations";
-    exportBtn.setAttribute("aria-label", "Export conversations");
-    exportBtn.value = "export-conversations";
-    const span = exportBtn.querySelector("span");
-    if (span) {
-      span.textContent = "Export conversations";
-      span.setAttribute("aria-label", "Export conversations");
-    }
-    exportBtn.addEventListener("click", () => {
-      callback();
-    });
-    baseBtn.parentElement?.append(exportBtn);
-  }
-  function injectExportButton(callback) {
-    hookIntoSidebar(callback);
-  }
   async function fetchCopilotChats(token, userOid, tenantId, maxChats, variants = "feature.EnableLastMessageForGetChats,feature.EnableMRUAgents,feature.EnableHasLoopPages") {
     const requestObj = {
       source: "officeweb",
@@ -198,11 +144,14 @@
     const binString = atob(encodedString);
     return Uint8Array.from(binString, (m) => m.codePointAt(0) || 0);
   }
+  function toArrayBuffer(bufferLike) {
+    return Uint8Array.from(bufferLike).buffer;
+  }
   async function deriveKey(baseKey, nonce, context) {
     return window.crypto.subtle.deriveKey(
       {
         name: HKDF,
-        salt: nonce,
+        salt: toArrayBuffer(nonce),
         hash: S256_HASH_ALG,
         info: new TextEncoder().encode(context)
       },
@@ -222,12 +171,12 @@
         // New key is derived for every encrypt so we don't need a new nonce
       },
       derivedKey,
-      encodedData
+      toArrayBuffer(encodedData)
     );
     return new TextDecoder().decode(decryptedData);
   }
   function generateHKDF(baseKey) {
-    return window.crypto.subtle.importKey(RAW, baseKey, HKDF, false, [
+    return window.crypto.subtle.importKey(RAW, toArrayBuffer(baseKey), HKDF, false, [
       DERIVE_KEY
     ]);
   }
@@ -477,12 +426,28 @@
   }
   const APP_TAG = "[Copilot Exporter]";
   console.log(`${APP_TAG} Userscript initalized.`);
-  const inject = () => injectExportButton(
-    () => {
-      console.log(`${APP_TAG} Export button clicked.`);
-      showExportModal();
-    }
-  );
+  const EXPORT_SVG = `<svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 5L11.2929 4.29289L12 3.58579L12.7071 4.29289L12 5ZM13 14C13 14.5523 12.5523 15 12 15C11.4477 15 11 14.5523 11 14L13 14ZM6.29289 9.29289L11.2929 4.29289L12.7071 5.70711L7.70711 10.7071L6.29289 9.29289ZM12.7071 4.29289L17.7071 9.29289L16.2929 10.7071L11.2929 5.70711L12.7071 4.29289ZM13 5L13 14L11 14L11 5L13 5Z" fill="#33363F"/>
+<path d="M5 16L5 17C5 18.1046 5.89543 19 7 19L17 19C18.1046 19 19 18.1046 19 17V16" stroke="#33363F" stroke-width="2"/>
+</svg>`;
+  const BUTTON_ID = "export-menu-button";
+  const inject = () => {
+    if (document.getElementById(BUTTON_ID)) return;
+    const btn = document.createElement("button");
+    const svgEl = new DOMParser().parseFromString(EXPORT_SVG, "image/svg+xml").documentElement;
+    const svg = document.importNode(svgEl, true);
+    btn.id = BUTTON_ID;
+    btn.style.width = "3em";
+    btn.style.height = "3em";
+    btn.style.bottom = "16px";
+    btn.style.right = "16px";
+    btn.style.cursor = "pointer";
+    btn.style.position = "fixed";
+    btn.append(svg);
+    btn.addEventListener("click", showExportModal);
+    document.body.appendChild(btn);
+  };
+  GM.registerMenuCommand("Open export menu", showExportModal);
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", inject);
   } else {

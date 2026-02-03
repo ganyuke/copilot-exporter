@@ -143,6 +143,15 @@ function base64DecToArr(base64String: string): Uint8Array {
 }
 
 /**
+ * Helper function to convert Uint8Array<ArrayBufferLike> to ArrayBuffer
+ * so that TSC stops yelling at me
+ * @param bufferLike arraybufferlike object
+ */
+function toArrayBuffer(bufferLike: Uint8Array<ArrayBufferLike>): ArrayBuffer {
+    return Uint8Array.from(bufferLike).buffer;
+}
+
+/**
  * Given a base key and a nonce generates a derived key to be used in encryption and decryption.
  * Note: every time we encrypt a new key is derived
  * @param baseKey
@@ -157,7 +166,7 @@ async function deriveKey(
     return window.crypto.subtle.deriveKey(
         {
             name: HKDF,
-            salt: nonce,
+            salt: toArrayBuffer(nonce),
             hash: S256_HASH_ALG,
             info: new TextEncoder().encode(context),
         },
@@ -189,7 +198,7 @@ async function decrypt(
             iv: new Uint8Array(12), // New key is derived for every encrypt so we don't need a new nonce
         },
         derivedKey,
-        encodedData
+        toArrayBuffer(encodedData)
     );
 
     return new TextDecoder().decode(decryptedData);
@@ -201,7 +210,7 @@ async function decrypt(
  * @returns
  */
 function generateHKDF(baseKey: /*ArrayBuffer*/Uint8Array<ArrayBufferLike>): Promise<CryptoKey> {
-    return window.crypto.subtle.importKey(RAW, baseKey, HKDF, false, [
+    return window.crypto.subtle.importKey(RAW, toArrayBuffer(baseKey), HKDF, false, [
         DERIVE_KEY,
     ]);
 }

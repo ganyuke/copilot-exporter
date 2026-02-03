@@ -3,7 +3,6 @@ An exporter for conversations in the Microsoft 365 Copilot Chat integrated into 
 
 Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh)'s [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter). This userscript is not 1:1 in functionality, though!
 
-
 <div style="display:flex">
   <img width="45%" src="https://github.com/user-attachments/assets/267c86c5-ed41-4989-924f-ae1f1aafb8c7" alt="Copilot Exporter's modal">
   <img width="45%" src="https://github.com/user-attachments/assets/4033fe5a-9ef7-40cc-bf2f-00f1a25f6886" alt="Copilot Exporter in action exporting 400+ conversations">
@@ -35,9 +34,11 @@ Copy or import [`dist/copilot-exporter.user.js`](https://github.com/ganyuke/copi
 
 ## How to use
 1. Navigate to your [M365 dashboard](https://m365.cloud.microsoft/chat/).
-2. Open the sidebar (if not expanded), open the "Conversations" fold (if not expanded), then click the new "Export conversations" button. A modal should appear.
+2. Open the export menu by either:
+  - Clicking on the floating export button in the bottom right.
+  - Opening the Greasemonkey command menu and selecting "Open export menu".
 3. Select the conversations you want to export.
-   - If the conversation(s) you want to export are further down, alter the maximum number of conversations shown and refetch.
+  - If the conversation(s) you want to export are further down, alter the maximum number of conversations shown and refetch.
 4. Click export once you've selected the conversations you want to export.
 
 ## How to build
