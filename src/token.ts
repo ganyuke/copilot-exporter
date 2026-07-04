@@ -1,35 +1,25 @@
+// `msal.3.token.keys.${clientId}`
 
-// JSON stored under the "identity" div in the M365 dashboard
-// https://m365.cloud.microsoft)
-type MSALIdentity = {
-    encryptionConfig: {
-        cryptoKey: {
-            k: string;
-            alg: string;
-            ext: boolean;
-            key_ops: string[];
-            kty: string;
-        };
-        digestSaltBase64: string;
-    };
-    tenantId: string; // uuid
-    puid: string; // 16-digit alphanumeric ID
-    objectId: string; // uuid
-    isMsa: boolean;
-    isPipl: boolean;
-    authType: number;
-    userPrincipalName: string; // email
-    userCountryCode: string;
-    authVersion: string;
-    loginHint: string;
-    dataBoundary: string;
-    identityIssuedTimeUnixMs: number; // 13-digit Unix timestamp
-    tenantRegionScope: string; // "NA"
-    activityTimeout: number;
-    controlsClaim: unknown[]; // don't know
-    signInState: string[];
-    userDisplayName: string // user's full name
+import { APP_TAG } from "./main";
+
+// all tokens are encrypted, need to decrypt with cookie `msal.cache.encryption` to get the actual token
+type MsalClientTokenEntry = {
+    idToken: string[]; // encrypted secret stored in this localStorage key of format MsalIdTokenEntry
+    accessToken: string[]; // accessTokens here are encrypted, need to decrypt to get the actual token
+    refreshToken: string[];
 }
+
+// idToken in LocalStorage is stored as below, found through `msal.3.token.keys.${clientId}`
+// `msal.3|${homeAccountId}|${environment}|idtoken|${clientId}|${tenantId}|${SCOPES.join(" ")}||`
+/*type MsalIdTokenEntry = {
+    credentialType: "IdToken";
+    homeAccountId: string;
+    environment: string;
+    clientId: string;
+    secret: string;
+    realm: string;
+    lastUpdatedAt: string;
+}*/
 
 // there is a LocalStoage item with these fields
 type ActiveAccountFilters = {
@@ -136,7 +126,7 @@ function base64DecToArr(base64String: string): Uint8Array {
             encodedString += "=";
             break;
         default:
-            throw Error("error extracting base64");
+            throw Error(`${APP_TAG} Error extracting base64`);
     }
     const binString = atob(encodedString);
     return Uint8Array.from(binString, (m) => m.codePointAt(0) || 0);
@@ -160,7 +150,7 @@ function toArrayBuffer(bufferLike: Uint8Array<ArrayBufferLike>): ArrayBuffer {
  */
 async function deriveKey(
     baseKey: CryptoKey,
-    nonce: Uint8Array<ArrayBufferLike>,//ArrayBuffer,
+    nonce: Uint8Array<ArrayBufferLike>,/* was originally ArrayBuffer but TS yells at me */
     context: string
 ): Promise<CryptoKey> {
     return window.crypto.subtle.deriveKey(
@@ -209,7 +199,7 @@ async function decrypt(
  * @param baseKey
  * @returns
  */
-function generateHKDF(baseKey: /*ArrayBuffer*/Uint8Array<ArrayBufferLike>): Promise<CryptoKey> {
+function generateHKDF(baseKey: /* was originally ArrayBuffer but TS yells at me */Uint8Array<ArrayBufferLike>): Promise<CryptoKey> {
     return window.crypto.subtle.importKey(RAW, toArrayBuffer(baseKey), HKDF, false, [
         DERIVE_KEY,
     ]);
@@ -222,7 +212,7 @@ async function getEncryptionCookie(): Promise<EncryptionCookie> {
         try {
             parsedCookie = JSON.parse(cookieString);
         } catch (e) {
-            throw Error("failed to parse encryption cookie")
+            throw Error(`${APP_TAG} Failed to parse encryption cookie`)
         }
     }
     if (parsedCookie.key && parsedCookie.id) {
@@ -232,7 +222,7 @@ async function getEncryptionCookie(): Promise<EncryptionCookie> {
             key: await generateHKDF(baseKey),
         };
     } else {
-        throw Error("no encryption cookie found")
+        throw Error(`${APP_TAG} No encryption cookie found`)
     }
 }
 
@@ -246,102 +236,68 @@ export const getMsalIds = (): MsalIds => {
     const clientId = "c0ab8ce9-e9a0-42e7-b064-33d422df41f1" // harcoded M365 Copilot Chat UUID
 
     // there should be a localstorage key containing the logged in account IDs
+    // somewhere in the page so that MSAL can find it
     // profile id (https://graph.microsoft.com/v1.0/me)
     // org id (https://graph.microsoft.com/v1.0/organization)
     // officeweb has a different clientId than Copilot Chat
-    /*const currentClientId = (unsafeWindow as any)?.msal?.clientIds?.[0] as string | undefined;
-    if (!currentClientId) {
-        throw Error("No client ID found for Copilot application");
+    const msalIds = localStorage.getItem("msal.3.account.keys");
+    if (!msalIds) {
+        throw Error(`${APP_TAG} No account keys found for Copilot application`);
     }
-    const accountIdsKey = `msal.${currentClientId}.active-account-filters`;
-    const accountIdsItem = localStorage.getItem(accountIdsKey);
-    if (!accountIdsItem) {
-        throw Error("No account ids found for Copilot application");
-    }
-    const accountIds = JSON.parse(accountIdsItem) as ActiveAccountFilters;
-    return {
-        clientId,
-        ...accountIds
-    }*/
+    const accountKeys = JSON.parse(msalIds) as String[];
 
-    // there's an identity block near the start of the page
-    const identityBlock = document.getElementById("identity") as HTMLDivElement;
-    if (!identityBlock || !identityBlock.textContent) {
-        throw new Error("missing user identity block")
+    if (accountKeys.length === 0) {
+        throw Error(`${APP_TAG} No account keys found for Copilot application`);
     }
 
-    const {
-        objectId: localAccountId,
-        tenantId
-    } = JSON.parse(identityBlock.textContent) as MSALIdentity;
+    // I only have one account key for the Copilot application so I don't know what multiple accounts
+    // look like and I don't want to write code for something I don't know.
+    // my org's M365 setup uses this key: `msal.3|${homeAccountId}|${environment}|${tenantId}`
+    const accountKey = accountKeys[0];
+    const [homeAccountId, _1, tenantId] = accountKey.split('|');
+    const [localAccountId, _2] = homeAccountId.split('.');
 
     return {
-        localAccountId,
-        tenantId,
-        homeAccountId: `${localAccountId}.${tenantId}`,
+        localAccountId: localAccountId,
+        tenantId: tenantId,
+        homeAccountId: homeAccountId,
         clientId,
     }
 }
 
 export const getAccessToken = async (msalIds: MsalIds): Promise<string> => {
     const encryptionCookie = await getEncryptionCookie();
-    const { homeAccountId, tenantId, clientId } = msalIds;
 
-    // the M365 Copilot uses the access token stored in LocalStorage with these scopes
-    const SCOPES = [
-        "https://substrate.office.com/sydney/.default"
-    ];
-    const ACCESS_TOKEN_LS = `${homeAccountId}-login.windows.net-accesstoken-${clientId}-${tenantId}-${SCOPES.join(" ")}--`
-    const lskv = localStorage.getItem(ACCESS_TOKEN_LS);
-    if (!lskv) {
-        throw Error("missing access token localstorage")
+    // my university's M365 setup stores idToken, accessToken, and refreshToken in the key: `msal.3.token.keys.${clientId}`
+    // `msal.version` reports 5.9.0  though... so I don't really know why it's 3 instead of 5 but I don't use MSAL myself
+    // the tokens might be at different places in other MSAL versions but this is the only M365 account I have so ¯\(ツ)/¯,
+    const tokenKeys = localStorage.getItem(`msal.3.token.keys.${msalIds.clientId}`);
+    if (!tokenKeys) {
+        throw Error(`${APP_TAG} No token keys found for Copilot application`);
     }
-    const payload = JSON.parse(lskv) as EncryptedData;
+    const tokenKeysData = JSON.parse(tokenKeys) as MsalClientTokenEntry;
+
+    // there should be a token among the access tokens under Copilot's client ID that has the Sydney scope
+    // that contains the bearer token that Copilot Chat APIs use (guess it was a codename :P). My current
+    // M365 Copilot Chat doesn't hit the Sydney API anymore (seems to directly mutate the page POSTing JSON
+    // to https://m365.cloud.microsoft/chat/${conversationId}), but the Sydney API endpoints somehow still work.
+    const sydneyKey = tokenKeysData.accessToken.find(token => token.includes("https://substrate.office.com/sydney/.default"));
+    if (!sydneyKey) {
+        throw Error(`${APP_TAG} No Sydney access token found for Copilot application`);
+    }
+    const sydneyTokenEntry = localStorage.getItem(sydneyKey);
+    if (!sydneyTokenEntry) {
+        throw Error(`${APP_TAG} No Sydney token found for Copilot application`);
+    }
+
+    // `msal.3.token.keys.${clientId}` tokens are all encrypted, need to decrypt with the encryption cookie at `msal.cache.encryption`
+    const payload = JSON.parse(sydneyTokenEntry) as EncryptedData;
     const decryptedData = await decrypt(
         encryptionCookie.key,
         payload.nonce,
-        clientId, // context is usually client ID according to MSAL v4 source code: https://github.com/AzureAD/microsoft-authentication-library-for-js/blob/afeaeddc777577b1b16f0084f5e5f9e4c15ee5e9/lib/msal-browser/src/cache/LocalStorage.ts#L302
+        msalIds.clientId, // context is usually client ID according to MSAL v4 source code: https://github.com/AzureAD/microsoft-authentication-library-for-js/blob/afeaeddc777577b1b16f0084f5e5f9e4c15ee5e9/lib/msal-browser/src/cache/LocalStorage.ts#L302
         payload.data
     );
     const parsedDecryptedData = JSON.parse(decryptedData) as MsalAccessTokenEntry;
     return parsedDecryptedData.secret;
 };
-
-/*export async function findCopilotAccessTokens(clientId: string): Promise<MsalAccessTokenEntry[]> {
-    const results: MsalAccessTokenEntry[] = [];
-    const encryptionCookie = await getEncryptionCookie();
-
-    for (const key of Object.keys(localStorage)) {
-        if (!key.includes("-accesstoken-")) continue;
-
-        const raw = localStorage.getItem(key);
-        if (!raw) continue;
-
-        try {
-            const enc = JSON.parse(raw);
-            if (enc?.id !== encryptionCookie.id) continue; // skip keys from old sessions
-
-            //   const context = key.includes(clientId) ? clientId : "";
-            const decryptedStr = await decrypt(
-                encryptionCookie.key,
-                enc.nonce,
-                clientId,
-                enc.data
-            );
-
-            const parsed = JSON.parse(decryptedStr) as MsalAccessTokenEntry;
-
-            if (
-                parsed.tokenType === "Bearer"// &&
-                // parsed.target.includes("substrate.office.com")
-            ) {
-                results.push(parsed);
-            }
-        } catch (err) {
-            console.warn(`${APP_TAG} Failed to decrypt key ${key}:`, err);
-            continue;
-        }
-    }
-
-    return results;
-}*/
