@@ -1,4 +1,7 @@
 # M365 Copilot Exporter
+![Greasy Fork Version](https://img.shields.io/greasyfork/v/543763)
+![Greasy Fork Downloads](https://img.shields.io/greasyfork/dt/543763)
+
 An exporter for conversations in the Microsoft 365 Copilot Chat integrated into the [Microsoft 365 dashboard](https://m365.cloud.microsoft/chat/).
 
 Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh)'s [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter). This userscript is not 1:1 in functionality, though!
