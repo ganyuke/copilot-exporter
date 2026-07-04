@@ -9,6 +9,7 @@
 // @source       https://github.com/ganyuke/copilot-exporter.git
 // @match        https://m365.cloud.microsoft/
 // @match        https://m365.cloud.microsoft/chat/*
+// @match        https://m365.cloud.microsoft/chat
 // @grant        GM.registerMenuCommand
 // @run-at       document-end
 // ==/UserScript==

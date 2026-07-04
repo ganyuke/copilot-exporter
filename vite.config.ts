@@ -12,7 +12,7 @@ export default defineConfig({
         namespace: packageJson.author.name,
         name: packageJson.title,
         description: packageJson.description,
-        match: ['https://m365.cloud.microsoft/', 'https://m365.cloud.microsoft/chat/*'],
+        match: ['https://m365.cloud.microsoft/', 'https://m365.cloud.microsoft/chat/*', 'https://m365.cloud.microsoft/chat'],
         'run-at': 'document-end'
       },
       build: {
