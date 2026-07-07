@@ -1,7 +1,7 @@
 /**
  * For M365 Copilot conversation to ChatGPT JSON format conversion.
  */
-import type { CopilotConversation, CopilotMessage } from "./api";
+import type { CopilotConversation, CopilotMessage } from "../api";
 
 type ExportRole = "system" | "user" | "assistant";
 

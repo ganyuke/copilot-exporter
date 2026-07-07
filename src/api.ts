@@ -99,7 +99,7 @@ type CopilotOverviewMessage = {
     storageMessageId: string; // 13-number string
 }
 
-type CopilotConversationOverview = {
+export type CopilotConversationOverview = {
     conversationId: string; // uuid
     chatName: string;
     tone: string;
@@ -177,6 +177,7 @@ export async function fetchCopilotChats(
     }
 
     const data = await res.json() as CopilotChats;
+    console.log(data);
     return data;
 }
 
