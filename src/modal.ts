@@ -390,6 +390,11 @@ export function showExportModal() {
         const items = getSelectedChats();
         if (items.length === 0) return;
 
+        const message = items.length === 1
+            ? `Permanently delete "${items[0].title}"? This cannot be undone.`
+            : `Permanently delete ${items.length} conversations? This cannot be undone.`;
+        if (!confirm(message)) return;
+
         clearRowStatus(items.map(i => i.id));
         items.forEach(i => setRowStatus(i.id, 'deleting'));
 
