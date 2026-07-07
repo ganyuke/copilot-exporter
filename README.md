@@ -1,4 +1,5 @@
 # M365 Copilot Exporter
+
 An exporter for conversations in the Microsoft 365 Copilot Chat integrated into the [Microsoft 365 dashboard](https://m365.cloud.microsoft/chat/).
 
 Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh)'s [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter). This userscript is not 1:1 in functionality, though!
@@ -9,30 +10,34 @@ Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh
 </div>
 
 > [!CAUTION]
-> This tool is maintained on a "when I feel like it" basis. Use at your own risk!
+> This tool is maintained on a "until I lose access to my Microsoft 365 account after I graduate" basis. Use at your own risk!
 
 ## Features
-- View list of Copilot conversations.
-- Bulk export Copilot conversations as its raw, internal JSON format.
-- Bulk deletion of Copilot conversations.
 
-Compared to ChatGPT Exporter, it does **not** support:
-- Exporting in formats OTHER than the official JSON. If you want to do this, I suppose you could convert Copilot's JSON to ChatGPT's, then shove it into ChatGPT Exporter.
+- View, bulk export, and bulk delete your conversations in Microsoft 365 Copilot Chat (m365.cloud.microsoft).
+- Convert your Copilot converstions into ChatGPT's `conversations.json` format for import into ChatGPT formatting tools (e.g. [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter)).
+- Pick and choose which converstions you want to save with an easy checkbox modal.
 
 ## Limitations
-The exporter can only show, at maximum, the latest 500 conversations. This is a limit imposed by the API endpoint used to get the list of chats. You'll need to delete some chats if you want to access anything beyond the latest 500 conversations.
+
+- The exporter can only show, at maximum, the latest 500 conversations. This is a limit imposed by the API endpoint used to get the list of chats. You'll need to delete some chats if you want to access anything beyond the latest 500 conversations.
+- This modal does not support HTML, PDF, or any other fancy export options. This is script is mainly for my own data hoarding purposes, so it only supports Copilot JSON (which preserves the most metadata among the options), ChatGPT JSON (`conversations.json`), and Markdown.
 
 ## How to install
+
 Install a userscript manager extension into your browser, such as Greasemonkey or Tampermonkey. I personally recommend [Greasemonkey](https://addons.mozilla.org/en-US/firefox/addon/greasemonkey/) (and I have only used this script on it, so your mileage may vary with others)!
 
 ### Greasyfork
+
 Once you have a userscript manager, you can download this script on Greasyfork using the link below and clicking "Install this script".
 https://greasyfork.org/en/scripts/543763-m365-copilot-exporter
 
 ### Manual
+
 Copy or import [`dist/copilot-exporter.user.js`](https://github.com/ganyuke/copilot-exporter/blob/master/dist/copilot-exporter.user.js) into a new script in your desired userscript manager.
 
 ## How to use
+
 1. Navigate to your [M365 dashboard](https://m365.cloud.microsoft/chat/).
 2. Open the export menu by either:
    - Clicking on the floating export button in the bottom right.
@@ -42,7 +47,9 @@ Copy or import [`dist/copilot-exporter.user.js`](https://github.com/ganyuke/copi
 4. Click export once you've selected the conversations you want to export.
 
 ## How to build
+
 For those seeking to maintain this:
+
 1. Clone this repository: `git clone https://github.com/ganyuke/copilot-exporter`.
 2. Open the directory: `cd copilot-exporter`.
 1. Get [`pnpm`](https://pnpm.io/installation).
