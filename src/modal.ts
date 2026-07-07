@@ -1,4 +1,6 @@
 import { fetchCopilotChats } from "./api";
+import { downloadBlobAsFile } from "./blob";
+import { mapToConversationJson } from "./converter";
 import { deleteBulk, exportBulkDirect } from "./expoter";
 import { APP_TAG } from "./main";
 import { getAccessToken, getMsalIds } from "./token";
@@ -64,6 +66,11 @@ export function showExportModal() {
         <button id="delete-conversations-button">Delete</button>
         <button id="export-conversations-button">Export</button>
       </div>
+    </div>
+
+    <div style="margin-top: 1em;">
+      <input type="file" id="copilot-json-upload" accept=".json,application/json" multiple hidden>
+      <button id="convert-to-chatgpt-button">Convert to ChatGPT JSON</button>
     </div>
   `;
 
@@ -195,6 +202,26 @@ export function showExportModal() {
     // hook up refetch button
     const refetchButton = document.getElementById("conversation-refetch")! as HTMLButtonElement;
     refetchButton.addEventListener("click", fetchChats);
+
+    const fileInput = document.getElementById("copilot-json-upload")! as HTMLInputElement;
+    const convertBtn = document.getElementById("convert-to-chatgpt-button")! as HTMLButtonElement;
+
+    convertBtn.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", async () => {
+        const files = fileInput.files;
+        if (!files || files.length === 0) return;
+
+        const converted = [];
+        for (const file of files) {
+            const parsed = JSON.parse(await file.text());
+            converted.push(mapToConversationJson(parsed));
+        }
+
+        const blob = new Blob([JSON.stringify(converted, null, 2)], { type: "application/json" });
+        downloadBlobAsFile(blob, "conversations.json");
+        fileInput.value = "";
+    });
 
     // it looks nicer if we populate the list on load
     fetchChats();
