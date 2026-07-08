@@ -2,11 +2,11 @@
 
 An exporter for conversations in the Microsoft 365 Copilot Chat integrated into the [Microsoft 365 dashboard](https://m365.cloud.microsoft/chat/).
 
-Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh)'s [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter). This userscript is not 1:1 in functionality, though!
+Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh)'s [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter).
 
 <div style="display:flex">
-  <img width="45%" src="https://github.com/user-attachments/assets/267c86c5-ed41-4989-924f-ae1f1aafb8c7" alt="Copilot Exporter's modal">
-  <img width="45%" src="https://github.com/user-attachments/assets/4033fe5a-9ef7-40cc-bf2f-00f1a25f6886" alt="Copilot Exporter in action exporting 400+ conversations">
+  <img width="45%" src="https://github.com/user-attachments/assets/69b8b899-2c17-4e86-ba88-ff5ae9e3d90b" alt="Copilot Exporter's modal">
+  <img width="45%" src="https://github.com/user-attachments/assets/eeba7e06-0b69-4798-a020-9cead94a11a1" alt="Copilot Exporter after bulk deleting three conversations" >
 </div>
 
 > [!CAUTION]
@@ -14,14 +14,14 @@ Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh
 
 ## Features
 
-- View, bulk export, and bulk delete your conversations in Microsoft 365 Copilot Chat (m365.cloud.microsoft).
+- View, bulk export, and bulk delete your conversations in Microsoft 365 Copilot Chat ([m365.cloud.microsoft](https://m365.cloud.microsoft)).
+- Choose from three export formats: **Copilot JSON**, **Markdown**, or **ChatGPT JSON** (with options for each to export as single file like `conversations.json` or as a ZIP).
 - Convert your Copilot converstions into ChatGPT's `conversations.json` format for import into ChatGPT formatting tools (e.g. [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter)).
-- Pick and choose which converstions you want to save with an easy checkbox modal.
 
 ## Limitations
 
 - The exporter can only show, at maximum, the latest 500 conversations. This is a limit imposed by the API endpoint used to get the list of chats. You'll need to delete some chats if you want to access anything beyond the latest 500 conversations.
-- This modal does not support HTML, PDF, or any other fancy export options. This is script is mainly for my own data hoarding purposes, so it only supports Copilot JSON (which preserves the most metadata among the options), ChatGPT JSON (`conversations.json`), and Markdown.
+- This modal does not support HTML, PDF, or any other fancy export options. This is script is mainly for my own data hoarding purposes, so it only supports Copilot JSON, which preserves the most metadata among the format options, and two formats that I anticpate others will like: ChatGPT JSON (for `conversations.json`) and Markdown.
 
 ## How to install
 
@@ -54,3 +54,11 @@ For those seeking to maintain this:
 2. Open the directory: `cd copilot-exporter`.
 1. Get [`pnpm`](https://pnpm.io/installation).
 2. Run `pnpm build`. The newly-built userscript should be in `dist/`.
+
+## Someting cool!
+
+For those wondering if it can really export ALL your conversations... here's 400+ conversations exported at once! Older UI, but the same scraping logic's still in there!
+
+<div style="display:flex">
+<img width="100%"  src="https://github.com/user-attachments/assets/4033fe5a-9ef7-40cc-bf2f-00f1a25f6886" alt="Copilot Exporter in action exporting 400+ conversations">
+</div>
