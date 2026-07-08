@@ -3,7 +3,7 @@ import type { CopilotConversation } from "./api";
 import { downloadBlobAsFile } from "./blob";
 import { mapToConversationJson } from "./converters/chatgpt";
 import { mapToMarkdown } from "./converters/markdown";
-import { deleteBulk, exportBulkDirect, ExportCallback, ExportFormat } from "./expoter";
+import { deleteBulk, exportBulkDirect, ExportCallback, ExportFormat, OutputMode } from "./expoter";
 import { APP_TAG } from "./main";
 import { getAccessToken, getMsalIds } from "./token";
 import project from '../package.json' with { type: 'json' };
@@ -76,7 +76,7 @@ export function showExportModal() {
           <button id="conversation-refetch">Refetch</button>
         </div>
       </div>
-      <div id="chatTableScroll" style="max-height: 85vh; overflow-y: auto; overflow-x: hidden;">
+      <div id="chatTableScroll" style="max-height: 50vh; overflow-y: auto; overflow-x: hidden;">
       <table id="chatTable" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
         <colgroup>
           <col style="width: 32px">
@@ -85,8 +85,8 @@ export function showExportModal() {
           <col style="width: 22%">
           <col style="width: 18%">
         </colgroup>
-        <thead>
-          <tr style="background: #f3f4f6; font-size: 0.875em;">
+        <thead style="position: sticky;top: 0;">
+          <tr style="background: lavender; font-size: 0.875em;">
             <th></th>
             <th style="text-align: left; padding: 4px 8px;">Name</th>
             <th style="text-align: left; padding: 4px 8px;">Created</th>
@@ -101,12 +101,19 @@ export function showExportModal() {
       </div>
     </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <select id="export-format-select">
-        <option value="json">JSON</option>
-        <option value="markdown">Markdown</option>
-        <option value="chatgpt">ChatGPT JSON</option>
-      </select>
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5em;">
+      <div style="display: flex; gap: 0.5em; align-items: center;">
+        <select id="export-format-select">
+          <option value="json">Copilot JSON</option>
+          <option value="markdown">Markdown</option>
+          <option value="chatgpt">ChatGPT JSON</option>
+        </select>
+        <select id="export-output-mode-select">
+          <option value="individual">Individual files</option>
+          <option value="combined">Combined file</option>
+          <option value="zip">Individual files (ZIP)</option>
+        </select>
+      </div>
       <div>
         <button id="delete-conversations-button">Delete</button>
         <button id="export-conversations-button">Export</button>
@@ -169,7 +176,48 @@ export function showExportModal() {
         selectAll.checked = selected > 0 && selected === loaded;
     }
 
-    function renderChatTable(chats: CopilotConversationOverview[]): void {
+    type TableRowSnapshot = {
+        checked: boolean;
+        chatName: string;
+        createTimeUtc: number;
+        updateTimeUtc: number;
+        statusText: string;
+        statusColor: string;
+        statusTitle: string | null;
+    };
+
+    function captureTableState(): Map<string, TableRowSnapshot> {
+        const state = new Map<string, TableRowSnapshot>();
+        const rows = document.querySelectorAll('#chatTableBody tr[data-conversation-id]');
+
+        for (const row of rows) {
+            const id = row.getAttribute('data-conversation-id');
+            if (!id) continue;
+
+            const checkbox = row.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
+            const statusCell = row.querySelector('.status-cell') as HTMLTableCellElement | null;
+
+            state.set(id, {
+                checked: checkbox?.checked ?? false,
+                chatName: row.getAttribute('data-chat-name') ?? '',
+                createTimeUtc: Number(row.getAttribute('data-create-time')),
+                updateTimeUtc: Number(row.getAttribute('data-update-time')),
+                statusText: statusCell?.textContent ?? '',
+                statusColor: statusCell?.style.color ?? '',
+                statusTitle: statusCell?.getAttribute('title') ?? null,
+            });
+        }
+
+        return state;
+    }
+
+    function chatDataMatches(snapshot: TableRowSnapshot, data: CopilotConversationOverview): boolean {
+        return snapshot.chatName === data.chatName
+            && snapshot.createTimeUtc === data.createTimeUtc
+            && snapshot.updateTimeUtc === data.updateTimeUtc;
+    }
+
+    function renderChatTable(chats: CopilotConversationOverview[], previousState?: Map<string, TableRowSnapshot>): void {
         const tbody = document.getElementById('chatTableBody')!;
         tbody.innerHTML = '';
 
@@ -187,6 +235,9 @@ export function showExportModal() {
             for (const data of sorted) {
                 const row = document.createElement('tr');
                 row.setAttribute('data-conversation-id', data.conversationId);
+                row.setAttribute('data-chat-name', data.chatName);
+                row.setAttribute('data-create-time', String(data.createTimeUtc));
+                row.setAttribute('data-update-time', String(data.updateTimeUtc));
                 row.style.borderBottom = '1px solid #e5e7eb';
 
                 const checkboxTd = document.createElement('td');
@@ -194,6 +245,12 @@ export function showExportModal() {
                 checkbox.type = 'checkbox';
                 checkbox.dataset.id = data.conversationId;
                 checkbox.dataset.title = data.chatName;
+
+                const previous = previousState?.get(data.conversationId);
+                if (previous) {
+                    checkbox.checked = previous.checked;
+                }
+
                 checkboxTd.appendChild(checkbox);
 
                 const nameTd = document.createElement('td');
@@ -213,6 +270,14 @@ export function showExportModal() {
                 const statusTd = document.createElement('td');
                 statusTd.className = 'status-cell';
                 statusTd.style.padding = '4px 8px';
+
+                if (previous && chatDataMatches(previous, data)) {
+                    statusTd.textContent = previous.statusText;
+                    statusTd.style.color = previous.statusColor;
+                    if (previous.statusTitle) {
+                        statusTd.title = previous.statusTitle;
+                    }
+                }
 
                 row.append(checkboxTd, nameTd, createdTd, updatedTd, statusTd);
                 tbody.appendChild(row);
@@ -322,11 +387,9 @@ export function showExportModal() {
     }
 
     async function fetchChats() {
+        const previousState = captureTableState();
         const tbody = document.getElementById('chatTableBody')!;
         tbody.innerHTML = '<tr><td colspan="5" style="color: #666; padding: 8px;">Loading…</td></tr>';
-
-        const selectAll = document.getElementById('selectAllCheckbox')! as HTMLInputElement;
-        selectAll.checked = false;
 
         try {
             const inputNumber = document.getElementById("conversation-fetch-list-max")! as HTMLInputElement;
@@ -339,11 +402,11 @@ export function showExportModal() {
             const accessToken = await getAccessToken(msalIds);
             const copilotChatList = await fetchCopilotChats(accessToken, msalIds.localAccountId, msalIds.tenantId, maxChats);
 
-            renderChatTable(copilotChatList.chats);
-            selectAll.checked = false;
+            renderChatTable(copilotChatList.chats, previousState);
             updateSelectedCount();
         } catch {
             tbody.innerHTML = '<tr><td colspan="5" style="color: #dc2626; padding: 8px;">Failed to load conversations.</td></tr>';
+            const selectAll = document.getElementById('selectAllCheckbox')! as HTMLInputElement;
             selectAll.checked = false;
             document.getElementById('selectedCount')!.textContent = '(0/0)';
         }
@@ -368,6 +431,27 @@ export function showExportModal() {
         return select.value as ExportFormat;
     }
 
+    function getOutputMode(): OutputMode {
+        const select = document.getElementById("export-output-mode-select")! as HTMLSelectElement;
+        return select.value as OutputMode;
+    }
+
+    function parseCopilotJsonFile(text: string): CopilotConversation[] {
+        const parsed = JSON.parse(text);
+        if (Array.isArray(parsed)) {
+            return parsed as CopilotConversation[];
+        }
+        return [parsed as CopilotConversation];
+    }
+
+    function showExportResultAlert(successCount: number, totalCount: number): void {
+        if (successCount === totalCount) {
+            alert(`Successfully exported ${successCount} of ${totalCount} conversations.`);
+        } else {
+            alert(`Exported ${successCount} of ${totalCount} conversations. Hover over red statuses for error details.`);
+        }
+    }
+
     function sanitizeFilename(name: string): string {
         const sanitized = name.replace(/[<>:"/\\|?*\x00-\x1f]/g, "_").trim();
         return sanitized || "conversation";
@@ -383,7 +467,13 @@ export function showExportModal() {
         if (!handler) {
             return;
         }
-        await exportBulkDirect(items.map(i => i.id), handler, getExportFormat());
+        const result = await exportBulkDirect(
+            items.map(i => i.id),
+            handler,
+            getExportFormat(),
+            getOutputMode(),
+        );
+        showExportResultAlert(result.successCount, result.totalCount);
     }
 
     async function deleteChats() {
@@ -431,6 +521,21 @@ export function showExportModal() {
     const exportBtn = document.getElementById("export-conversations-button")! as HTMLButtonElement;
     exportBtn.addEventListener("click", exportChats)
 
+    const exportFormatSelect = document.getElementById("export-format-select")! as HTMLSelectElement;
+    const exportOutputModeSelect = document.getElementById("export-output-mode-select")! as HTMLSelectElement;
+    const combinedOutputOption = exportOutputModeSelect.querySelector('option[value="combined"]')! as HTMLOptionElement;
+
+    exportFormatSelect.addEventListener("change", () => {
+        if (exportFormatSelect.value === "markdown") {
+            combinedOutputOption.disabled = true;
+            if (exportOutputModeSelect.value === "combined") {
+                exportOutputModeSelect.value = "zip";
+            }
+        } else {
+            combinedOutputOption.disabled = false;
+        }
+    });
+
     const deleteBtn = document.getElementById("delete-conversations-button")! as HTMLButtonElement;
     deleteBtn.addEventListener("click", deleteChats)
 
@@ -451,7 +556,7 @@ export function showExportModal() {
         const conversations: CopilotConversation[] = [];
 
         for (const file of files) {
-            conversations.push(JSON.parse(await file.text()));
+            conversations.push(...parseCopilotJsonFile(await file.text()));
         }
 
         if (format === "chatgpt") {
