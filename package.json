@@ -3,9 +3,10 @@
   "name": "@ganyuke/copilot-exporter",
   "description": "An exporter for the Copilot Chat integrated into the M365 dashboard.",
   "author": {
-    "name": "ganyuke"
+    "name": "ganyuke",
+    "url": "https://github.com/ganyuke"
   },
-  "version": "1.2.1",
+  "version": "2.0.0",
   "license": "MIT",
   "private": true,
   "type": "module",
@@ -19,11 +20,13 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/greasemonkey": "^4.0.7",
     "typescript": "^6.0.3",
     "vite": "^8.1.3",
     "vite-plugin-monkey": "^8.0.6"
   },
   "dependencies": {
-    "@types/greasemonkey": "^4.0.7"
+    "@litejs/zip": "^26.4.0",
+    "sanitize-filename": "^1.6.4"
   }
 }

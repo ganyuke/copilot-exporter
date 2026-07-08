@@ -1,2 +1,4 @@
 allowBuilds:
   esbuild: true
+patchedDependencies:
+  '@litejs/zip': patches/@litejs__zip.patch

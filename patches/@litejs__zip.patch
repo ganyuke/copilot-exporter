@@ -1,0 +1,100 @@
+diff --git a/zip.js b/zip.js
+index 2432c0a6f1a311c038dc36e37b560068ff425bca..20fd40cc3a016d8636eba2b0937876cd5f2bf797 100644
+--- a/zip.js
++++ b/zip.js
+@@ -2,20 +2,17 @@
+ 
+ /* globals Blob, Promise, Response */
+ 
+-;((exports, Uint8Array) => {
+-
+-	// Attach createZip to `window` in non-module context
+-	exports.createZip = (files, opts, next) => {
+-		if (typeof opts == "function") {
+-			next = opts
+-			opts = {}
+-		}
+-		var i = 256, j, k, offset = 0
++export function createZip(files, opts, next) {
++	if (typeof opts == "function") {
++		next = opts
++		opts = {}
++	}
++	var i = 256, j, k, offset = 0
+ 		, crcTable = []
+ 		, cd = ""
+ 		, out = []
+ 		, outLen = 0
+-		, CompressionStream = (exports.window || global).CompressionStream
++		, CompressionStream = window.CompressionStream
+ 		, now = Date.now()
+ 		, push = arr => {
+ 			out.push(arr)
+@@ -46,47 +43,43 @@
+ 			if (!k) {
+ 				k = files.length
+ 				name = toUtf8(opts && opts.comment)
+-				push(toUint(cd + "PK\5\6" + le32(0) + le32((k<<16) + k) + le32(cd.length) + le32(offset) + le16(name.length) + name))
++				push(toUint(cd + "PK\x05\x06" + le32(0) + le32((k << 16) + k) + le32(cd.length) + le32(offset) + le16(name.length) + name))
+ 				file = new Uint8Array(outLen)
+ 				for (i = 0, offset = 0; (j = out[i++]); offset += j.length) file.set(j, offset)
+ 				return resolve(file)
+ 			}
+ 			var fileLen
+-			, name = toUtf8(k.name)
+-			, nameLen = name.length
+-			, file = k.content
+-			, crc = -1
++				, name = toUtf8(k.name)
++				, nameLen = name.length
++				, file = k.content
++				, crc = -1
+ 
+ 			if (typeof file === "string") file = toUint(toUtf8(file))
+ 			fileLen = file.length
+ 
+-			for (j = 0; j < fileLen; ) {
++			for (j = 0; j < fileLen;) {
+ 				crc = (crc >>> 8) ^ crcTable[(crc ^ file[j++]) & 0xff]
+ 			}
+ 			compress(file, fileLen, (compressed, method) => {
+-				method = file === compressed ? "\0\0" : "\10\0"
+-				method = le32(20 | 1<<27) + method + le32(dosDate(new Date(k.time > 0 || k.time === 0 ? k.time : now))) + le32(-1^crc >>> 0) + le32(compressed.length) + le32(fileLen) + le32(nameLen)
+-				push(toUint("PK\3\4" + method + name))
++				method = file === compressed ? "\x00\x00" : "\x08\x00"
++				method = le32(20 | 1 << 27) + method + le32(dosDate(new Date(k.time > 0 || k.time === 0 ? k.time : now))) + le32(-1 ^ crc >>> 0) + le32(compressed.length) + le32(fileLen) + le32(nameLen)
++				push(toUint("PK\x03\x04" + method + name))
+ 				push(compressed)
+-				cd += "PK\1\2\0\24" + method + "\0\0" + le32(0) + le32(32) + le32(offset) + name
++				cd += "PK\x01\x02\x00\x14" + method + "\x00\x00" + le32(0) + le32(32) + le32(offset) + name
+ 				offset += 30 + compressed.length + nameLen
+ 				add(resolve)
+ 			})
+ 		}
+ 
+-		for (; i; crcTable[i] = k) {
+-			k = --i
+-			for (j = 8; j--; ) k = 0xedb88320 * (1&k) ^ k >>> 1
+-		}
+-
+-		if (next) {
+-			add(next.bind(next, null))
+-		} else if (opts && opts.deflate) {
+-			add(file => out = file)
+-			return out
+-		} else return new Promise(add)
++	for (; i; crcTable[i] = k) {
++		k = --i
++		for (j = 8; j--;) k = 0xedb88320 * (1 & k) ^ k >>> 1
+ 	}
+ 
+-// this is `exports` in module and `window` in browser
+-})(this, Uint8Array) // jshint ignore:line
+-
++	if (next) {
++		add(next.bind(next, null))
++	} else if (opts && opts.deflate) {
++		add(file => out = file)
++		return out
++	} else return new Promise(add)
++}

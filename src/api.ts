@@ -1,4 +1,4 @@
-/*type CopilotMessage = {
+export type CopilotMessage = {
   text: string;
   author: string; // either "bot" or "user"
   createdAt: string; // ISO-8601 timestamp
@@ -23,10 +23,10 @@
   }[],
   contentOrigin: string; // "DeepLeo", "officeweb"
   turnCount: number; // index of message in conversation
-  storageMessageId: string; // 13-number string  0: "text"
+  storageMessageId: string; // 13-number string
 }
 
-type CopilotBotMessage = CopilotMessage & {
+export type CopilotBotMessage = CopilotMessage & {
   adaptiveCards: {
     type: string;
     version: string;
@@ -43,7 +43,7 @@ type CopilotBotMessage = CopilotMessage & {
   spokenText: string; // looks empty?
 }
 
-type CopilotUserMessage = CopilotMessage & {
+export type CopilotUserMessage = CopilotMessage & {
   from: {
     id: string; // uuid
   };
@@ -60,7 +60,15 @@ type CopilotUserMessage = CopilotMessage & {
   };
   inputMethod: string; // "Keyboard"
   entityAnnotationTypes: string[]; // "People", "File", etc.
-}*/
+}
+
+export type CopilotConversation = {
+  messages: CopilotMessage[];
+  chatName: string;
+  createTimeUtc: number;
+  updateTimeUtc: number;
+  conversationId: string;
+}
 
 // bot messages in `/GetChats` have scores
 type CopilotOverviewMessage = {
@@ -91,7 +99,7 @@ type CopilotOverviewMessage = {
     storageMessageId: string; // 13-number string
 }
 
-type CopilotConversationOverview = {
+export type CopilotConversationOverview = {
     conversationId: string; // uuid
     chatName: string;
     tone: string;
@@ -169,6 +177,7 @@ export async function fetchCopilotChats(
     }
 
     const data = await res.json() as CopilotChats;
+    console.log(data);
     return data;
 }
 
