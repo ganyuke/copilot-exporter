@@ -1,9 +1,9 @@
 // ==UserScript==
 // @name         M365 Copilot Exporter
 // @namespace    ganyuke
-// @version      2.0.0
+// @version      2.0.1
 // @author       ganyuke
-// @description  An exporter for the Copilot Chat integrated into the M365 dashboard.
+// @description  View, bulk delete, and export your Microsoft 365 Copilot Chat conversations into raw JSON, readable Markdown, or ChatGPT's conversation.json format.
 // @license      MIT
 // @icon         https://upload.wikimedia.org/wikipedia/commons/0/0e/Microsoft_365_%282022%29.svg
 // @source       https://github.com/ganyuke/copilot-exporter.git
@@ -217,6 +217,7 @@
 		};
 	}
 	var SOURCE_URL = "https://m365.cloud.microsoft/chat/conversation";
+	var CITATION_MARKER_RE = /【([^】]+)】/g;
 	function millisToIsoOffset(ms) {
 		return new Date(ms).toISOString().replace("Z", "+00:00");
 	}
@@ -243,11 +244,46 @@
 			minute: "2-digit"
 		}).format(date);
 	}
+	function parseCitationContent(content) {
+		if (!content) return null;
+		try {
+			return JSON.parse(content);
+		} catch {
+			return null;
+		}
+	}
+	function resolveMessageBody(message) {
+		const rawText = message.text ?? "";
+		try {
+			const cardText = message.adaptiveCards?.[0]?.body?.[0]?.text;
+			if (typeof cardText !== "string") return rawText;
+			const references = message.references ?? {};
+			const used = new Map();
+			const rewritten = cardText.replace(CITATION_MARKER_RE, (_match, key) => {
+				const ref = references[key];
+				if (!ref?.targetLink) throw new Error(`missing reference for ${key}`);
+				const parsed = parseCitationContent(ref.displayData?.content);
+				const n = parsed?.label;
+				const title = parsed?.Title;
+				if (!n || !title) throw new Error(`incomplete citation metadata for ${key}`);
+				if (!used.has(key)) used.set(key, {
+					n,
+					title,
+					url: ref.targetLink
+				});
+				return `[${n}]`;
+			});
+			if (used.size === 0) return rewritten;
+			return `${rewritten}\n\n**Sources:**\n\n${[...used.values()].sort((a, b) => Number(a.n) - Number(b.n)).map(({ n, title, url }) => `[${n}] [${title}](${url})`).join("\n")}`;
+		} catch {
+			return rawText;
+		}
+	}
 	function formatMessage(message) {
 		const date = parseMessageDate(message.createdAt ?? message.timestamp);
 		const lines = [`## ${speakerLabel(message.author)}:`];
 		if (date) lines.push(formatTimeElement(date));
-		lines.push("", message.text ?? "");
+		lines.push("", resolveMessageBody(message));
 		return lines.join("\n");
 	}
 	function mapToMarkdown(source) {
@@ -660,37 +696,14 @@
 		callback(conversationIds.length - 1);
 		console.log(`${APP_TAG} Completed deletion for conversations ${conversationIds.join()}`);
 	}
-	var package_default = {
-		title: "M365 Copilot Exporter",
-		name: "@ganyuke/copilot-exporter",
-		description: "An exporter for the Copilot Chat integrated into the M365 dashboard.",
-		author: {
-			"name": "ganyuke",
-			"url": "https://github.com/ganyuke"
-		},
-		version: "2.0.0",
-		license: "MIT",
-		"private": true,
-		type: "module",
-		repository: {
-			"type": "git",
-			"url": "https://github.com/ganyuke/copilot-exporter.git"
-		},
-		scripts: {
-			"dev": "vite",
-			"build": "tsc && vite build",
-			"preview": "vite preview"
-		},
-		devDependencies: {
-			"@types/greasemonkey": "^4.0.7",
-			"typescript": "^6.0.3",
-			"vite": "^8.1.3",
-			"vite-plugin-monkey": "^8.0.6"
-		},
-		dependencies: {
-			"@litejs/zip": "^26.4.0",
-			"sanitize-filename": "^1.6.4"
-		}
+	var author = {
+		"name": "ganyuke",
+		"url": "https://github.com/ganyuke"
+	};
+	var version = "2.0.1";
+	var repository = {
+		"type": "git",
+		"url": "https://github.com/ganyuke/copilot-exporter.git"
 	};
 	var STATUS_COLORS = {
 		exporting: "#ca8a04",
@@ -731,7 +744,7 @@
   `;
 		modal.innerHTML = `
     <h2 style="margin:0;">Export conversations</h2>
-    <p style="margin: 0.5rem 0;color: darkorchid;"><a style="color: inherit;" href="${package_default.repository.url}" target="_blank">M365 Copilot Exporter</a> v${package_default.version} by <a style="color: inherit;" href="${package_default.author.url}" target="_blank">${package_default.author.name}</a></p>
+    <p style="margin: 0.5rem 0;color: darkorchid;"><a style="color: inherit;" href="${repository.url}" target="_blank">M365 Copilot Exporter</a> v${version} by <a style="color: inherit;" href="${author.url}" target="_blank">${author.name}</a></p>
 
     <div id="chatTableContainer" style="margin: 1em 0; border: 1px solid #ccc; padding: 0.5em;">
       <div id="chatTableToolbar" style="margin-bottom: 0.5em;">

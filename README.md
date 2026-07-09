@@ -1,8 +1,17 @@
 # M365 Copilot Exporter
-![Greasy Fork Version](https://img.shields.io/greasyfork/v/543763)
-![Greasy Fork Downloads](https://img.shields.io/greasyfork/dt/543763)
 
-An exporter for conversations in the Microsoft 365 Copilot Chat integrated into the [Microsoft 365 dashboard](https://m365.cloud.microsoft/chat/).
+[![Greasy Fork Version][release-image]][release-url]
+[![Greasy Fork Downloads](https://img.shields.io/greasyfork/dt/543763)][GreasyFork-url]
+[![Greasy Fork Link][GreasyFork-image]][GreasyFork-url]
+
+[release-image]: https://img.shields.io/greasyfork/v/543763
+[release-url]: https://github.com/ganyuke/copilot-exporter/releases/latest
+[GreasyFork-image]: https://img.shields.io/static/v1?label=%20&message=GreasyFork&style=flat-square&labelColor=7B0000&color=960000&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3ggEBCQHM3fXsAAAAVdJREFUOMudkz2qwkAUhc/goBaGJBgUtBCZyj0ILkpwAW7Bws4yO3AHLiCtEFD8KVREkoiFxZzX5A2KGfN4F04zMN+ce+5c4LMUgDmANYBnrnV+plBSi+FwyHq9TgA2LQpvCiEiABwMBtzv95RSfoNEHy8DYBzHrNVqVEr9BWKcqNFoxF6vx3a7zc1mYyC73a4MogBg7vs+z+czO50OW60Wt9stK5UKp9Mpj8cjq9WqDTBHnjAdxzGQZrPJw+HA31oulzbAWgLoA0CWZVBKIY5jzGYzdLtdE9DlcrFNrY98zobqOA6TJKHW2jg4nU5sNBpFDp6mhVe5rsvVasUwDHm9Xqm15u12o+/7Hy0gD8KatOd5vN/v1FozTVN6nkchxFuI6hsAAIMg4OPxMJCXdtTbR7JJCMEgCJhlGUlyPB4XfumozInrupxMJpRSRtZlKoNYl+m/6/wDuWAjtPfsQuwAAAAASUVORK5CYII=
+[GreasyFork-url]: https://greasyfork.org/en/scripts/543763-m365-copilot-exporter
+
+View, bulk delete, and export your Microsoft 365 Copilot Chat conversations into raw JSON, readable Markdown, or ChatGPT's `conversation.json` format.
+
+**Install from GreasyFork here:** https://greasyfork.org/en/scripts/543763-m365-copilot-exporter
 
 Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh)'s [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter).
 
@@ -17,7 +26,7 @@ Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh
 ## Features
 
 - View, bulk export, and bulk delete your conversations in Microsoft 365 Copilot Chat ([m365.cloud.microsoft](https://m365.cloud.microsoft)).
-- Choose from three export formats: **Copilot JSON**, **Markdown**, or **ChatGPT JSON** (with options for each to export as single file like `conversations.json` or as a ZIP).
+- Choose from three export formats: **Copilot JSON**, **Markdown** (with citations!), or **ChatGPT JSON** (with options for each to export as single file like `conversations.json` or as a ZIP).
 - Convert your Copilot converstions into ChatGPT's `conversations.json` format for import into ChatGPT formatting tools (e.g. [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter)).
 
 ## Limitations

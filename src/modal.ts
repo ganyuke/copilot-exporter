@@ -6,7 +6,7 @@ import { mapToMarkdown } from "./converters/markdown";
 import { deleteBulk, exportBulkDirect, ExportCallback, ExportFormat, OutputMode } from "./expoter";
 import { APP_TAG } from "./main";
 import { getAccessToken, getMsalIds } from "./token";
-import project from '../package.json' with { type: 'json' };
+import { version, author, repository } from '../package.json' with { type: 'json' };
 
 type TransportObject = {
     id: string;
@@ -62,7 +62,7 @@ export function showExportModal() {
 
     modal.innerHTML = `
     <h2 style="margin:0;">Export conversations</h2>
-    <p style="margin: 0.5rem 0;color: darkorchid;"><a style="color: inherit;" href="${project.repository.url}" target="_blank">M365 Copilot Exporter</a> v${project.version} by <a style="color: inherit;" href="${project.author.url}" target="_blank">${project.author.name}</a></p>
+    <p style="margin: 0.5rem 0;color: darkorchid;"><a style="color: inherit;" href="${repository.url}" target="_blank">M365 Copilot Exporter</a> v${version} by <a style="color: inherit;" href="${author.url}" target="_blank">${author.name}</a></p>
 
     <div id="chatTableContainer" style="margin: 1em 0; border: 1px solid #ccc; padding: 0.5em;">
       <div id="chatTableToolbar" style="margin-bottom: 0.5em;">
