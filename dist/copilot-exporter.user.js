@@ -7,9 +7,7 @@
 // @license      MIT
 // @icon         https://upload.wikimedia.org/wikipedia/commons/0/0e/Microsoft_365_%282022%29.svg
 // @source       https://github.com/ganyuke/copilot-exporter.git
-// @match        https://m365.cloud.microsoft/
-// @match        https://m365.cloud.microsoft/chat/*
-// @match        https://m365.cloud.microsoft/chat
+// @match        https://m365.cloud.microsoft/*
 // @grant        GM.registerMenuCommand
 // @run-at       document-end
 // ==/UserScript==
