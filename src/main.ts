@@ -31,6 +31,7 @@ const inject = () => {
     btn.style.right = "16px";
     btn.style.cursor = "pointer";
     btn.style.position = "fixed";
+    btn.style.backgroundColor = "lightgray";
     btn.append(svg);
 
     btn.addEventListener("click", showExportModal);

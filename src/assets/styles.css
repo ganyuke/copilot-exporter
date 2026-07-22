@@ -1,0 +1,252 @@
+#copilotExportOverlay {
+    --ce-bg: #ffffff;
+    --ce-text: #111111;
+    --ce-muted: #666666;
+    --ce-border: #cccccc;
+    --ce-header-bg: lavender;
+    --ce-row-border: #e5e7eb;
+    --ce-input-bg: #ebebeb;
+    --ce-input-bg--hover: #c8c8c8de;
+    --ce-accent: darkorchid;
+    --ce-error: #dc2626;
+    --ce-status-exporting: #ca8a04;
+    --ce-status-exported: #16a34a;
+    --ce-status-deleting: #ca8a04;
+    --ce-status-deleted: #6b7280;
+    --ce-status-error: #dc2626;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+[data-color-scheme="dark"] #copilotExportOverlay {
+    --ce-bg: #1e1e1e;
+    --ce-text: #f3f4f6;
+    --ce-muted: #9ca3af;
+    --ce-border: #404040;
+    --ce-header-bg: #2d2d3a;
+    --ce-row-border: #404040;
+    --ce-input-bg: #2d2d2d;
+    --ce-input-bg--hover: #3d3d3d;
+    --ce-accent: #c084fc;
+    --ce-error: #f87171;
+    --ce-status-exporting: #ca8a04;
+    --ce-status-exported: #16a34a;
+    --ce-status-deleting: #ca8a04;
+    --ce-status-deleted: #9ca3af;
+    --ce-status-error: #f87171;
+}
+
+#copilotExportModal {
+    background: var(--ce-bg);
+    color: var(--ce-text);
+    color-scheme: light dark;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90vw;
+    max-width: 800px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    font-family: sans-serif;
+}
+
+#copilotExportTitle {
+    margin: 0;
+}
+
+#copilotExportByline {
+    margin: 0.5rem 0;
+    color: var(--ce-accent);
+}
+
+#copilotExportByline a {
+    color: inherit;
+}
+
+#chatTableContainer {
+    margin: 1em 0;
+    border: 1px solid var(--ce-border);
+    padding: 0.5em;
+}
+
+#chatTableToolbar {
+    margin-bottom: 0.5em;
+}
+
+#toolbarSelectRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.875em;
+}
+
+#toolbarFetchRow {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-top: 0.5em;
+    font-size: 0.875em;
+}
+
+#toolbarFetchRow label {
+    flex: 1;
+}
+
+#selectedCount {
+    color: var(--ce-muted);
+    font-size: 0.875em;
+}
+
+#chatTableScroll {
+    max-height: 50vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#chatTable {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+#chatTable col:nth-child(1) {
+    width: 32px;
+}
+
+#chatTable col:nth-child(2) {
+    width: 38%;
+}
+
+#chatTable col:nth-child(3) {
+    width: 22%;
+}
+
+#chatTable col:nth-child(4) {
+    width: 22%;
+}
+
+#chatTable col:nth-child(5) {
+    width: 18%;
+}
+
+#chatTable thead {
+    position: sticky;
+    top: 0;
+}
+
+#chatTable thead tr {
+    background: var(--ce-header-bg);
+    font-size: 0.875em;
+}
+
+#chatTable th,
+#chatTable td {
+    padding: 4px 8px;
+}
+
+#chatTable th {
+    text-align: left;
+}
+
+#chatTable tbody tr {
+    border-bottom: 1px solid var(--ce-row-border);
+}
+
+#chatTableBody .name-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#chatTableBody .date-cell {
+    font-size: 0.875em;
+}
+
+#chatTableBody td.placeholder {
+    color: var(--ce-muted);
+    padding: 8px;
+}
+
+#chatTableBody td.error-text {
+    color: var(--ce-error);
+    padding: 8px;
+}
+
+#chatTableBody td.status-cell[data-status="exporting"] {
+    color: var(--ce-status-exporting);
+}
+
+#chatTableBody td.status-cell[data-status="exported"] {
+    color: var(--ce-status-exported);
+}
+
+#chatTableBody td.status-cell[data-status="deleting"] {
+    color: var(--ce-status-deleting);
+}
+
+#chatTableBody td.status-cell[data-status="deleted"] {
+    color: var(--ce-status-deleted);
+}
+
+#chatTableBody td.status-cell[data-status="error"] {
+    color: var(--ce-status-error);
+}
+
+#exportActions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5em;
+}
+
+#exportActionsFormats,
+#exportActionsButtons {
+    display: flex;
+    gap: 0.5em;
+    align-items: center;
+}
+
+#convertSection {
+    margin-top: 1em;
+}
+
+#convertHelp {
+    margin: 0 0 0.5em;
+    font-size: 0.8125em;
+    color: var(--ce-muted);
+}
+
+#convert-format-select {
+    margin-right: 0.5em;
+}
+
+#chat-export-progress-bar-container {
+    display: flex;
+    flex-direction: column;
+    margin-top: 0.5em;
+}
+
+#chat-export-progress-label {
+    display: flex;
+}
+
+#chat-export-progress-title {
+    flex-grow: 1;
+}
+
+#copilotExportOverlay select,
+#copilotExportOverlay input[type="number"],
+#copilotExportOverlay button {
+    background: var(--ce-input-bg);
+    color: var(--ce-text);
+    border: 1px solid var(--ce-border);
+}
+
+#copilotExportOverlay select:hover,
+#copilotExportOverlay input[type="number"]:hover,
+#copilotExportOverlay button:hover {
+    background: var(--ce-input-bg--hover);
+}

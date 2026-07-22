@@ -7,6 +7,7 @@ import { deleteBulk, exportBulkDirect, ExportCallback, ExportFormat, OutputMode 
 import { APP_TAG } from "./main";
 import { getAccessToken, getMsalIds } from "./token";
 import { version, author, repository } from '../package.json' with { type: 'json' };
+import MODAL_STYLES from './assets/styles.css?inline';
 
 type TransportObject = {
     id: string;
@@ -14,14 +15,6 @@ type TransportObject = {
 }
 
 type RowStatus = 'exporting' | 'exported' | 'deleting' | 'deleted' | 'error';
-
-const STATUS_COLORS: Record<RowStatus, string> = {
-    exporting: '#ca8a04',
-    exported: '#16a34a',
-    deleting: '#ca8a04',
-    deleted: '#6b7280',
-    error: '#dc2626',
-};
 
 const STATUS_LABELS: Record<RowStatus, string> = {
     exporting: 'exporting…',
@@ -31,78 +24,87 @@ const STATUS_LABELS: Record<RowStatus, string> = {
     error: 'error',
 };
 
+function waitForNextPaint(): Promise<void> {
+    return new Promise((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+}
+
+function setRowStatusOnCell(cell: HTMLTableCellElement, status: RowStatus, error?: string): void {
+    cell.textContent = STATUS_LABELS[status];
+    cell.className = 'status-cell';
+    cell.dataset.status = status;
+    if (status === 'error' && error) {
+        cell.title = error;
+    } else {
+        cell.removeAttribute('title');
+    }
+}
+
 export function showExportModal() {
     if (document.getElementById('copilotExportOverlay')) return;
 
     const overlay = document.createElement('div');
     overlay.id = 'copilotExportOverlay';
-    overlay.style.cssText = `
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 9999;
-  `;
 
     overlay.addEventListener("click", () => {
         overlay.remove();
     })
 
+    const style = document.createElement('style');
+    style.textContent = MODAL_STYLES;
+    overlay.appendChild(style);
+
     const modal = document.createElement('div');
+    modal.id = 'copilotExportModal';
 
     modal.addEventListener("click", (e) => {
         e.stopPropagation();
     });
 
-    modal.style.cssText = `
-    background: white; padding: 20px; border-radius: 8px;
-    width: 90vw; max-width: 800px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    font-family: sans-serif;
-  `;
-
     modal.innerHTML = `
-    <h2 style="margin:0;">Export conversations</h2>
-    <p style="margin: 0.5rem 0;color: darkorchid;"><a style="color: inherit;" href="${repository.url}" target="_blank">M365 Copilot Exporter</a> v${version} by <a style="color: inherit;" href="${author.url}" target="_blank">${author.name}</a></p>
+    <h2 id="copilotExportTitle">Export conversations</h2>
+    <p id="copilotExportByline"><a href="${repository.url}" target="_blank">M365 Copilot Exporter</a> v${version} by <a href="${author.url}" target="_blank">${author.name}</a></p>
 
-    <div id="chatTableContainer" style="margin: 1em 0; border: 1px solid #ccc; padding: 0.5em;">
-      <div id="chatTableToolbar" style="margin-bottom: 0.5em;">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <label style="font-size: 0.875em;"><input type="checkbox" id="selectAllCheckbox"> Select All</label>
-          <span id="selectedCount" style="color: #666; font-size: 0.875em;">(0/0)</span>
+    <div id="chatTableContainer">
+      <div id="chatTableToolbar">
+        <div id="toolbarSelectRow">
+          <label><input type="checkbox" id="selectAllCheckbox"> Select All</label>
+          <span id="selectedCount">(0/0)</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5em; margin-top: 0.5em; font-size: 0.875em;">
-          <label for="conversation-fetch-list-max" style="flex: 1;">Max conversations</label>
+        <div id="toolbarFetchRow">
+          <label for="conversation-fetch-list-max">Max conversations</label>
           <input type="number" id="conversation-fetch-list-max" name="quantity" min="0" placeholder="15">
           <button id="conversation-refetch">Refetch</button>
         </div>
       </div>
-      <div id="chatTableScroll" style="max-height: 50vh; overflow-y: auto; overflow-x: hidden;">
-      <table id="chatTable" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+      <div id="chatTableScroll">
+      <table id="chatTable">
         <colgroup>
-          <col style="width: 32px">
-          <col style="width: 38%">
-          <col style="width: 22%">
-          <col style="width: 22%">
-          <col style="width: 18%">
+          <col>
+          <col>
+          <col>
+          <col>
+          <col>
         </colgroup>
-        <thead style="position: sticky;top: 0;">
-          <tr style="background: lavender; font-size: 0.875em;">
+        <thead>
+          <tr>
             <th></th>
-            <th style="text-align: left; padding: 4px 8px;">Name</th>
-            <th style="text-align: left; padding: 4px 8px;">Created</th>
-            <th style="text-align: left; padding: 4px 8px;">Updated</th>
-            <th style="text-align: left; padding: 4px 8px;">Status</th>
+            <th>Name</th>
+            <th>Created</th>
+            <th>Updated</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody id="chatTableBody">
-          <tr><td colspan="5" style="color: #666; padding: 8px;">Loading…</td></tr>
+          <tr><td colspan="5" class="placeholder">Loading…</td></tr>
         </tbody>
       </table>
       </div>
     </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5em;">
-      <div style="display: flex; gap: 0.5em; align-items: center;">
+    <div id="exportActions">
+      <div id="exportActionsFormats">
         <select id="export-format-select">
           <option value="json">Copilot JSON</option>
           <option value="markdown">Markdown</option>
@@ -111,22 +113,25 @@ export function showExportModal() {
         <select id="export-output-mode-select">
           <option value="individual">Individual files</option>
           <option value="combined">Combined file</option>
-          <option value="zip">Individual files (ZIP)</option>
+          <option value="zip" selected>Individual files (ZIP)</option>
         </select>
       </div>
-      <div>
+      <div id="exportActionsButtons">
         <button id="delete-conversations-button">Delete</button>
         <button id="export-conversations-button">Export</button>
       </div>
     </div>
 
-    <div style="margin-top: 1em;">
+    <div id="convertSection">
+      <p id="convertHelp">
+        Re-import and convert exported Copilot JSON files to other formats.
+      </p>
       <input type="file" id="copilot-json-upload" accept=".json,application/json" multiple hidden>
-      <select id="convert-format-select" style="margin-right: 0.5em;">
+      <select id="convert-format-select">
         <option value="chatgpt">ChatGPT JSON</option>
         <option value="markdown">Markdown</option>
       </select>
-      <button id="convert-uploaded-button">Convert uploaded JSON</button>
+      <button id="convert-uploaded-button">Open and convert Copilot JSON</button>
     </div>
   `;
 
@@ -147,13 +152,7 @@ export function showExportModal() {
     function setRowStatus(conversationId: string, status: RowStatus, error?: string): void {
         const cell = findStatusCell(conversationId);
         if (!cell) return;
-        cell.textContent = STATUS_LABELS[status];
-        cell.style.color = STATUS_COLORS[status];
-        if (status === 'error' && error) {
-            cell.title = error;
-        } else {
-            cell.removeAttribute('title');
-        }
+        setRowStatusOnCell(cell, status, error);
     }
 
     function clearRowStatus(conversationIds: string[]): void {
@@ -161,7 +160,8 @@ export function showExportModal() {
             const cell = findStatusCell(id);
             if (!cell) continue;
             cell.textContent = '';
-            cell.style.color = '';
+            cell.className = 'status-cell';
+            delete cell.dataset.status;
             cell.removeAttribute('title');
         }
     }
@@ -181,8 +181,7 @@ export function showExportModal() {
         chatName: string;
         createTimeUtc: number;
         updateTimeUtc: number;
-        statusText: string;
-        statusColor: string;
+        status: RowStatus | null;
         statusTitle: string | null;
     };
 
@@ -202,13 +201,20 @@ export function showExportModal() {
                 chatName: row.getAttribute('data-chat-name') ?? '',
                 createTimeUtc: Number(row.getAttribute('data-create-time')),
                 updateTimeUtc: Number(row.getAttribute('data-update-time')),
-                statusText: statusCell?.textContent ?? '',
-                statusColor: statusCell?.style.color ?? '',
+                status: statusCell ? statusFromCell(statusCell) : null,
                 statusTitle: statusCell?.getAttribute('title') ?? null,
             });
         }
 
         return state;
+    }
+
+    function statusFromCell(cell: HTMLTableCellElement): RowStatus | null {
+        const status = cell.dataset.status;
+        if (status && status in STATUS_LABELS) {
+            return status as RowStatus;
+        }
+        return null;
     }
 
     function chatDataMatches(snapshot: TableRowSnapshot, data: CopilotConversationOverview): boolean {
@@ -228,7 +234,7 @@ export function showExportModal() {
             const cell = document.createElement('td');
             cell.colSpan = 5;
             cell.textContent = 'No conversations found.';
-            cell.style.padding = '8px';
+            cell.className = 'placeholder';
             row.appendChild(cell);
             tbody.appendChild(row);
         } else {
@@ -238,7 +244,6 @@ export function showExportModal() {
                 row.setAttribute('data-chat-name', data.chatName);
                 row.setAttribute('data-create-time', String(data.createTimeUtc));
                 row.setAttribute('data-update-time', String(data.updateTimeUtc));
-                row.style.borderBottom = '1px solid #e5e7eb';
 
                 const checkboxTd = document.createElement('td');
                 const checkbox = document.createElement('input');
@@ -255,28 +260,22 @@ export function showExportModal() {
 
                 const nameTd = document.createElement('td');
                 nameTd.className = 'name-cell';
-                nameTd.style.cssText = 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 8px;';
                 nameTd.title = data.chatName;
                 nameTd.textContent = data.chatName;
 
                 const createdTd = document.createElement('td');
-                createdTd.style.cssText = 'font-size: 0.875em; padding: 4px 8px;';
+                createdTd.className = 'date-cell';
                 createdTd.textContent = formatPrettyDate(data.createTimeUtc);
 
                 const updatedTd = document.createElement('td');
-                updatedTd.style.cssText = 'font-size: 0.875em; padding: 4px 8px;';
+                updatedTd.className = 'date-cell';
                 updatedTd.textContent = formatPrettyDate(data.updateTimeUtc);
 
                 const statusTd = document.createElement('td');
                 statusTd.className = 'status-cell';
-                statusTd.style.padding = '4px 8px';
 
-                if (previous && chatDataMatches(previous, data)) {
-                    statusTd.textContent = previous.statusText;
-                    statusTd.style.color = previous.statusColor;
-                    if (previous.statusTitle) {
-                        statusTd.title = previous.statusTitle;
-                    }
+                if (previous && chatDataMatches(previous, data) && previous.status) {
+                    setRowStatusOnCell(statusTd, previous.status, previous.statusTitle ?? undefined);
                 }
 
                 row.append(checkboxTd, nameTd, createdTd, updatedTd, statusTd);
@@ -298,14 +297,13 @@ export function showExportModal() {
         removeProgressBar();
 
         const progressBarContainer = document.createElement("div") as HTMLDivElement;
-        progressBarContainer.id = "chat-export-progress-bar-container"
-        progressBarContainer.style = "display: flex;flex-direction: column;margin-top: 0.5em;"
+        progressBarContainer.id = "chat-export-progress-bar-container";
         const progressBar = document.createElement("progress") as HTMLProgressElement;
         const label = document.createElement("label") as HTMLLabelElement;
-        label.style = "display:flex;"
+        label.id = "chat-export-progress-label";
         const titleSpan = document.createElement("span") as HTMLSpanElement;
         const progressTextSpan = document.createElement("span") as HTMLSpanElement;
-        titleSpan.style = "flex-grow:1;"
+        titleSpan.id = "chat-export-progress-title";
         progressBar.id = "chat-export-progress-bar";
         progressBar.max = items.length;
         progressBar.value = 0;
@@ -338,14 +336,13 @@ export function showExportModal() {
         removeProgressBar();
 
         const progressBarContainer = document.createElement("div") as HTMLDivElement;
-        progressBarContainer.id = "chat-export-progress-bar-container"
-        progressBarContainer.style = "display: flex;flex-direction: column;margin-top: 0.5em;"
+        progressBarContainer.id = "chat-export-progress-bar-container";
         const progressBar = document.createElement("progress") as HTMLProgressElement;
         const label = document.createElement("label") as HTMLLabelElement;
-        label.style = "display:flex;"
+        label.id = "chat-export-progress-label";
         const titleSpan = document.createElement("span") as HTMLSpanElement;
         const progressTextSpan = document.createElement("span") as HTMLSpanElement;
-        titleSpan.style = "flex-grow:1;"
+        titleSpan.id = "chat-export-progress-title";
         progressBar.id = "chat-export-progress-bar";
         progressBar.max = items.length;
         progressBar.value = 0;
@@ -389,7 +386,7 @@ export function showExportModal() {
     async function fetchChats() {
         const previousState = captureTableState();
         const tbody = document.getElementById('chatTableBody')!;
-        tbody.innerHTML = '<tr><td colspan="5" style="color: #666; padding: 8px;">Loading…</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="placeholder">Loading…</td></tr>';
 
         try {
             const inputNumber = document.getElementById("conversation-fetch-list-max")! as HTMLInputElement;
@@ -405,7 +402,7 @@ export function showExportModal() {
             renderChatTable(copilotChatList.chats, previousState);
             updateSelectedCount();
         } catch {
-            tbody.innerHTML = '<tr><td colspan="5" style="color: #dc2626; padding: 8px;">Failed to load conversations.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="error-text">Failed to load conversations.</td></tr>';
             const selectAll = document.getElementById('selectAllCheckbox')! as HTMLInputElement;
             selectAll.checked = false;
             document.getElementById('selectedCount')!.textContent = '(0/0)';
@@ -496,6 +493,12 @@ export function showExportModal() {
                 progressUpdater ?? (() => { }),
             );
             items.forEach(i => setRowStatus(i.id, 'deleted'));
+            // need to wait a frame so that progress gets updated before the confirm dialog appears
+            await waitForNextPaint();
+            const refetchMessage =  `Deleted ${items.length} conversation${items.length === 1 ? '' : 's'}. Refetch now to update the list?`;
+            if (confirm(refetchMessage)) {
+                await fetchChats();
+            }
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             items.forEach(i => setRowStatus(i.id, 'error', msg));
