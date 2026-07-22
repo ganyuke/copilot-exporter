@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         M365 Copilot Exporter
 // @namespace    ganyuke
-// @version      2.0.1
+// @version      2.0.2
 // @author       ganyuke
 // @description  View, bulk delete, and export your Microsoft 365 Copilot Chat conversations into raw JSON, readable Markdown, or ChatGPT's conversation.json format.
 // @license      MIT
@@ -698,18 +698,12 @@
 		"name": "ganyuke",
 		"url": "https://github.com/ganyuke"
 	};
-	var version = "2.0.1";
+	var version = "2.0.2";
 	var repository = {
 		"type": "git",
 		"url": "https://github.com/ganyuke/copilot-exporter.git"
 	};
-	var STATUS_COLORS = {
-		exporting: "#ca8a04",
-		exported: "#16a34a",
-		deleting: "#ca8a04",
-		deleted: "#6b7280",
-		error: "#dc2626"
-	};
+	var styles_default = "#copilotExportOverlay{--ce-bg:#fff;--ce-text:#111;--ce-muted:#666;--ce-border:#ccc;--ce-header-bg:lavender;--ce-row-border:#e5e7eb;--ce-input-bg:#ebebeb;--ce-input-bg--hover:#c8c8c8de;--ce-accent:darkorchid;--ce-error:#dc2626;--ce-status-exporting:#ca8a04;--ce-status-exported:#16a34a;--ce-status-deleting:#ca8a04;--ce-status-deleted:#6b7280;--ce-status-error:#dc2626;z-index:9999;background:#00000080;justify-content:center;align-items:center;display:flex;position:fixed;inset:0}[data-color-scheme=dark] #copilotExportOverlay{--ce-bg:#1e1e1e;--ce-text:#f3f4f6;--ce-muted:#9ca3af;--ce-border:#404040;--ce-header-bg:#2d2d3a;--ce-row-border:#404040;--ce-input-bg:#2d2d2d;--ce-input-bg--hover:#3d3d3d;--ce-accent:#c084fc;--ce-error:#f87171;--ce-status-exporting:#ca8a04;--ce-status-exported:#16a34a;--ce-status-deleting:#ca8a04;--ce-status-deleted:#9ca3af;--ce-status-error:#f87171}#copilotExportModal{background:var(--ce-bg);color:var(--ce-text);--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light dark;border-radius:8px;width:90vw;max-width:800px;padding:20px;font-family:sans-serif;box-shadow:0 4px 10px #0003}@media (prefers-color-scheme:dark){#copilotExportModal{--lightningcss-light: ;--lightningcss-dark:initial}}#copilotExportTitle{margin:0}#copilotExportByline{color:var(--ce-accent);margin:.5rem 0}#copilotExportByline a{color:inherit}#chatTableContainer{border:1px solid var(--ce-border);margin:1em 0;padding:.5em}#chatTableToolbar{margin-bottom:.5em}#toolbarSelectRow{justify-content:space-between;align-items:center;font-size:.875em;display:flex}#toolbarFetchRow{align-items:center;gap:.5em;margin-top:.5em;font-size:.875em;display:flex}#toolbarFetchRow label{flex:1}#selectedCount{color:var(--ce-muted);font-size:.875em}#chatTableScroll{max-height:50vh;overflow:hidden auto}#chatTable{border-collapse:collapse;table-layout:fixed;width:100%}#chatTable col:first-child{width:32px}#chatTable col:nth-child(2){width:38%}#chatTable col:nth-child(3),#chatTable col:nth-child(4){width:22%}#chatTable col:nth-child(5){width:18%}#chatTable thead{position:sticky;top:0}#chatTable thead tr{background:var(--ce-header-bg);font-size:.875em}#chatTable th,#chatTable td{padding:4px 8px}#chatTable th{text-align:left}#chatTable tbody tr{border-bottom:1px solid var(--ce-row-border)}#chatTableBody .name-cell{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}#chatTableBody .date-cell{font-size:.875em}#chatTableBody td.placeholder{color:var(--ce-muted);padding:8px}#chatTableBody td.error-text{color:var(--ce-error);padding:8px}#chatTableBody td.status-cell[data-status=exporting]{color:var(--ce-status-exporting)}#chatTableBody td.status-cell[data-status=exported]{color:var(--ce-status-exported)}#chatTableBody td.status-cell[data-status=deleting]{color:var(--ce-status-deleting)}#chatTableBody td.status-cell[data-status=deleted]{color:var(--ce-status-deleted)}#chatTableBody td.status-cell[data-status=error]{color:var(--ce-status-error)}#exportActions{justify-content:space-between;align-items:center;gap:.5em;display:flex}#exportActionsFormats,#exportActionsButtons{align-items:center;gap:.5em;display:flex}#convertSection{margin-top:1em}#convertHelp{color:var(--ce-muted);margin:0 0 .5em;font-size:.8125em}#convert-format-select{margin-right:.5em}#chat-export-progress-bar-container{flex-direction:column;margin-top:.5em;display:flex}#chat-export-progress-label{display:flex}#chat-export-progress-title{flex-grow:1}#copilotExportOverlay select,#copilotExportOverlay input[type=number],#copilotExportOverlay button{background:var(--ce-input-bg);color:var(--ce-text);border:1px solid var(--ce-border)}#copilotExportOverlay select:hover,#copilotExportOverlay input[type=number]:hover,#copilotExportOverlay button:hover{background:var(--ce-input-bg--hover)}";
 	var STATUS_LABELS = {
 		exporting: "exporting…",
 		exported: "exported",
@@ -717,72 +711,76 @@
 		deleted: "deleted",
 		error: "error"
 	};
+	function waitForNextPaint() {
+		return new Promise((resolve) => {
+			requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+		});
+	}
+	function setRowStatusOnCell(cell, status, error) {
+		cell.textContent = STATUS_LABELS[status];
+		cell.className = "status-cell";
+		cell.dataset.status = status;
+		if (status === "error" && error) cell.title = error;
+		else cell.removeAttribute("title");
+	}
 	function showExportModal() {
 		if (document.getElementById("copilotExportOverlay")) return;
 		const overlay = document.createElement("div");
 		overlay.id = "copilotExportOverlay";
-		overlay.style.cssText = `
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.5);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 9999;
-  `;
 		overlay.addEventListener("click", () => {
 			overlay.remove();
 		});
+		const style = document.createElement("style");
+		style.textContent = styles_default;
+		overlay.appendChild(style);
 		const modal = document.createElement("div");
+		modal.id = "copilotExportModal";
 		modal.addEventListener("click", (e) => {
 			e.stopPropagation();
 		});
-		modal.style.cssText = `
-    background: white; padding: 20px; border-radius: 8px;
-    width: 90vw; max-width: 800px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    font-family: sans-serif;
-  `;
 		modal.innerHTML = `
-    <h2 style="margin:0;">Export conversations</h2>
-    <p style="margin: 0.5rem 0;color: darkorchid;"><a style="color: inherit;" href="${repository.url}" target="_blank">M365 Copilot Exporter</a> v${version} by <a style="color: inherit;" href="${author.url}" target="_blank">${author.name}</a></p>
+    <h2 id="copilotExportTitle">Export conversations</h2>
+    <p id="copilotExportByline"><a href="${repository.url}" target="_blank">M365 Copilot Exporter</a> v${version} by <a href="${author.url}" target="_blank">${author.name}</a></p>
 
-    <div id="chatTableContainer" style="margin: 1em 0; border: 1px solid #ccc; padding: 0.5em;">
-      <div id="chatTableToolbar" style="margin-bottom: 0.5em;">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <label style="font-size: 0.875em;"><input type="checkbox" id="selectAllCheckbox"> Select All</label>
-          <span id="selectedCount" style="color: #666; font-size: 0.875em;">(0/0)</span>
+    <div id="chatTableContainer">
+      <div id="chatTableToolbar">
+        <div id="toolbarSelectRow">
+          <label><input type="checkbox" id="selectAllCheckbox"> Select All</label>
+          <span id="selectedCount">(0/0)</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 0.5em; margin-top: 0.5em; font-size: 0.875em;">
-          <label for="conversation-fetch-list-max" style="flex: 1;">Max conversations</label>
+        <div id="toolbarFetchRow">
+          <label for="conversation-fetch-list-max">Max conversations</label>
           <input type="number" id="conversation-fetch-list-max" name="quantity" min="0" placeholder="15">
           <button id="conversation-refetch">Refetch</button>
         </div>
       </div>
-      <div id="chatTableScroll" style="max-height: 50vh; overflow-y: auto; overflow-x: hidden;">
-      <table id="chatTable" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+      <div id="chatTableScroll">
+      <table id="chatTable">
         <colgroup>
-          <col style="width: 32px">
-          <col style="width: 38%">
-          <col style="width: 22%">
-          <col style="width: 22%">
-          <col style="width: 18%">
+          <col>
+          <col>
+          <col>
+          <col>
+          <col>
         </colgroup>
-        <thead style="position: sticky;top: 0;">
-          <tr style="background: lavender; font-size: 0.875em;">
+        <thead>
+          <tr>
             <th></th>
-            <th style="text-align: left; padding: 4px 8px;">Name</th>
-            <th style="text-align: left; padding: 4px 8px;">Created</th>
-            <th style="text-align: left; padding: 4px 8px;">Updated</th>
-            <th style="text-align: left; padding: 4px 8px;">Status</th>
+            <th>Name</th>
+            <th>Created</th>
+            <th>Updated</th>
+            <th>Status</th>
           </tr>
         </thead>
         <tbody id="chatTableBody">
-          <tr><td colspan="5" style="color: #666; padding: 8px;">Loading…</td></tr>
+          <tr><td colspan="5" class="placeholder">Loading…</td></tr>
         </tbody>
       </table>
       </div>
     </div>
 
-    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5em;">
-      <div style="display: flex; gap: 0.5em; align-items: center;">
+    <div id="exportActions">
+      <div id="exportActionsFormats">
         <select id="export-format-select">
           <option value="json">Copilot JSON</option>
           <option value="markdown">Markdown</option>
@@ -791,22 +789,25 @@
         <select id="export-output-mode-select">
           <option value="individual">Individual files</option>
           <option value="combined">Combined file</option>
-          <option value="zip">Individual files (ZIP)</option>
+          <option value="zip" selected>Individual files (ZIP)</option>
         </select>
       </div>
-      <div>
+      <div id="exportActionsButtons">
         <button id="delete-conversations-button">Delete</button>
         <button id="export-conversations-button">Export</button>
       </div>
     </div>
 
-    <div style="margin-top: 1em;">
+    <div id="convertSection">
+      <p id="convertHelp">
+        Re-import and convert exported Copilot JSON files to other formats.
+      </p>
       <input type="file" id="copilot-json-upload" accept=".json,application/json" multiple hidden>
-      <select id="convert-format-select" style="margin-right: 0.5em;">
+      <select id="convert-format-select">
         <option value="chatgpt">ChatGPT JSON</option>
         <option value="markdown">Markdown</option>
       </select>
-      <button id="convert-uploaded-button">Convert uploaded JSON</button>
+      <button id="convert-uploaded-button">Open and convert Copilot JSON</button>
     </div>
   `;
 		overlay.appendChild(modal);
@@ -823,17 +824,15 @@
 		function setRowStatus(conversationId, status, error) {
 			const cell = findStatusCell(conversationId);
 			if (!cell) return;
-			cell.textContent = STATUS_LABELS[status];
-			cell.style.color = STATUS_COLORS[status];
-			if (status === "error" && error) cell.title = error;
-			else cell.removeAttribute("title");
+			setRowStatusOnCell(cell, status, error);
 		}
 		function clearRowStatus(conversationIds) {
 			for (const id of conversationIds) {
 				const cell = findStatusCell(id);
 				if (!cell) continue;
 				cell.textContent = "";
-				cell.style.color = "";
+				cell.className = "status-cell";
+				delete cell.dataset.status;
 				cell.removeAttribute("title");
 			}
 		}
@@ -859,12 +858,16 @@
 					chatName: row.getAttribute("data-chat-name") ?? "",
 					createTimeUtc: Number(row.getAttribute("data-create-time")),
 					updateTimeUtc: Number(row.getAttribute("data-update-time")),
-					statusText: statusCell?.textContent ?? "",
-					statusColor: statusCell?.style.color ?? "",
+					status: statusCell ? statusFromCell(statusCell) : null,
 					statusTitle: statusCell?.getAttribute("title") ?? null
 				});
 			}
 			return state;
+		}
+		function statusFromCell(cell) {
+			const status = cell.dataset.status;
+			if (status && status in STATUS_LABELS) return status;
+			return null;
 		}
 		function chatDataMatches(snapshot, data) {
 			return snapshot.chatName === data.chatName && snapshot.createTimeUtc === data.createTimeUtc && snapshot.updateTimeUtc === data.updateTimeUtc;
@@ -878,7 +881,7 @@
 				const cell = document.createElement("td");
 				cell.colSpan = 5;
 				cell.textContent = "No conversations found.";
-				cell.style.padding = "8px";
+				cell.className = "placeholder";
 				row.appendChild(cell);
 				tbody.appendChild(row);
 			} else for (const data of sorted) {
@@ -887,7 +890,6 @@
 				row.setAttribute("data-chat-name", data.chatName);
 				row.setAttribute("data-create-time", String(data.createTimeUtc));
 				row.setAttribute("data-update-time", String(data.updateTimeUtc));
-				row.style.borderBottom = "1px solid #e5e7eb";
 				const checkboxTd = document.createElement("td");
 				const checkbox = document.createElement("input");
 				checkbox.type = "checkbox";
@@ -898,23 +900,17 @@
 				checkboxTd.appendChild(checkbox);
 				const nameTd = document.createElement("td");
 				nameTd.className = "name-cell";
-				nameTd.style.cssText = "overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 8px;";
 				nameTd.title = data.chatName;
 				nameTd.textContent = data.chatName;
 				const createdTd = document.createElement("td");
-				createdTd.style.cssText = "font-size: 0.875em; padding: 4px 8px;";
+				createdTd.className = "date-cell";
 				createdTd.textContent = formatPrettyDate(data.createTimeUtc);
 				const updatedTd = document.createElement("td");
-				updatedTd.style.cssText = "font-size: 0.875em; padding: 4px 8px;";
+				updatedTd.className = "date-cell";
 				updatedTd.textContent = formatPrettyDate(data.updateTimeUtc);
 				const statusTd = document.createElement("td");
 				statusTd.className = "status-cell";
-				statusTd.style.padding = "4px 8px";
-				if (previous && chatDataMatches(previous, data)) {
-					statusTd.textContent = previous.statusText;
-					statusTd.style.color = previous.statusColor;
-					if (previous.statusTitle) statusTd.title = previous.statusTitle;
-				}
+				if (previous && chatDataMatches(previous, data) && previous.status) setRowStatusOnCell(statusTd, previous.status, previous.statusTitle ?? void 0);
 				row.append(checkboxTd, nameTd, createdTd, updatedTd, statusTd);
 				tbody.appendChild(row);
 			}
@@ -928,13 +924,12 @@
 			removeProgressBar();
 			const progressBarContainer = document.createElement("div");
 			progressBarContainer.id = "chat-export-progress-bar-container";
-			progressBarContainer.style = "display: flex;flex-direction: column;margin-top: 0.5em;";
 			const progressBar = document.createElement("progress");
 			const label = document.createElement("label");
-			label.style = "display:flex;";
+			label.id = "chat-export-progress-label";
 			const titleSpan = document.createElement("span");
 			const progressTextSpan = document.createElement("span");
-			titleSpan.style = "flex-grow:1;";
+			titleSpan.id = "chat-export-progress-title";
 			progressBar.id = "chat-export-progress-bar";
 			progressBar.max = items.length;
 			progressBar.value = 0;
@@ -959,13 +954,12 @@
 			removeProgressBar();
 			const progressBarContainer = document.createElement("div");
 			progressBarContainer.id = "chat-export-progress-bar-container";
-			progressBarContainer.style = "display: flex;flex-direction: column;margin-top: 0.5em;";
 			const progressBar = document.createElement("progress");
 			const label = document.createElement("label");
-			label.style = "display:flex;";
+			label.id = "chat-export-progress-label";
 			const titleSpan = document.createElement("span");
 			const progressTextSpan = document.createElement("span");
-			titleSpan.style = "flex-grow:1;";
+			titleSpan.id = "chat-export-progress-title";
 			progressBar.id = "chat-export-progress-bar";
 			progressBar.max = items.length;
 			progressBar.value = 0;
@@ -1001,7 +995,7 @@
 		async function fetchChats() {
 			const previousState = captureTableState();
 			const tbody = document.getElementById("chatTableBody");
-			tbody.innerHTML = "<tr><td colspan=\"5\" style=\"color: #666; padding: 8px;\">Loading…</td></tr>";
+			tbody.innerHTML = "<tr><td colspan=\"5\" class=\"placeholder\">Loading…</td></tr>";
 			try {
 				const n = document.getElementById("conversation-fetch-list-max").valueAsNumber;
 				const maxChats = isNaN(n) ? 15 : n;
@@ -1011,7 +1005,7 @@
 				renderChatTable((await fetchCopilotChats(await getAccessToken(msalIds), msalIds.localAccountId, msalIds.tenantId, maxChats)).chats, previousState);
 				updateSelectedCount();
 			} catch {
-				tbody.innerHTML = "<tr><td colspan=\"5\" style=\"color: #dc2626; padding: 8px;\">Failed to load conversations.</td></tr>";
+				tbody.innerHTML = "<tr><td colspan=\"5\" class=\"error-text\">Failed to load conversations.</td></tr>";
 				const selectAll = document.getElementById("selectAllCheckbox");
 				selectAll.checked = false;
 				document.getElementById("selectedCount").textContent = "(0/0)";
@@ -1068,6 +1062,9 @@
 			try {
 				await deleteBulk(items.map((i) => i.id), progressUpdater ?? (() => {}));
 				items.forEach((i) => setRowStatus(i.id, "deleted"));
+				await waitForNextPaint();
+				const refetchMessage = `Deleted ${items.length} conversation${items.length === 1 ? "" : "s"}. Refetch now to update the list?`;
+				if (confirm(refetchMessage)) await fetchChats();
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
 				items.forEach((i) => setRowStatus(i.id, "error", msg));
@@ -1132,6 +1129,7 @@
 		btn.style.right = "16px";
 		btn.style.cursor = "pointer";
 		btn.style.position = "fixed";
+		btn.style.backgroundColor = "lightgray";
 		btn.append(svg);
 		btn.addEventListener("click", showExportModal);
 		document.body.appendChild(btn);
