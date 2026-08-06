@@ -7,7 +7,7 @@ import { deleteBulk, exportBulkDirect, ExportCallback, ExportFormat, OutputMode 
 import { APP_TAG } from "./main";
 import { getAccessToken, getMsalIds } from "./token";
 import { version, author, repository } from '../package.json' with { type: 'json' };
-import MODAL_STYLES from './assets/styles.css?inline';
+import './assets/styles.css';
 
 type TransportObject = {
     id: string;
@@ -50,10 +50,6 @@ export function showExportModal() {
     overlay.addEventListener("click", () => {
         overlay.remove();
     })
-
-    const style = document.createElement('style');
-    style.textContent = MODAL_STYLES;
-    overlay.appendChild(style);
 
     const modal = document.createElement('div');
     modal.id = 'copilotExportModal';
@@ -105,6 +101,9 @@ export function showExportModal() {
 
     <div id="exportActions">
       <div id="exportActionsFormats">
+        <p class="ce-action-help-text">
+            Select the format and output mode for the exported conversations.
+        </p>
         <select id="export-format-select">
           <option value="json">Copilot JSON</option>
           <option value="markdown">Markdown</option>
@@ -117,13 +116,13 @@ export function showExportModal() {
         </select>
       </div>
       <div id="exportActionsButtons">
-        <button id="delete-conversations-button">Delete</button>
         <button id="export-conversations-button">Export</button>
+        <button id="delete-conversations-button">Delete</button>
       </div>
     </div>
 
     <div id="convertSection">
-      <p id="convertHelp">
+      <p class="ce-action-help-text">
         Re-import and convert exported Copilot JSON files to other formats.
       </p>
       <input type="file" id="copilot-json-upload" accept=".json,application/json" multiple hidden>

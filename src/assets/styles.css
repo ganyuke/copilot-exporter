@@ -14,6 +14,10 @@
     --ce-status-deleting: #ca8a04;
     --ce-status-deleted: #6b7280;
     --ce-status-error: #dc2626;
+    --ce-export-button-bg: #0078d4;
+    --ce-export-button-bg--hover: #106ebe;
+    --ce-delete-button-bg: #dc2626;
+    --ce-delete-button-bg--hover: #b91c1c;
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.5);
@@ -202,7 +206,6 @@
     gap: 0.5em;
 }
 
-#exportActionsFormats,
 #exportActionsButtons {
     display: flex;
     gap: 0.5em;
@@ -213,14 +216,10 @@
     margin-top: 1em;
 }
 
-#convertHelp {
+.ce-action-help-text {
     margin: 0 0 0.5em;
     font-size: 0.8125em;
     color: var(--ce-muted);
-}
-
-#convert-format-select {
-    margin-right: 0.5em;
 }
 
 #chat-export-progress-bar-container {
@@ -250,3 +249,26 @@
 #copilotExportOverlay button:hover {
     background: var(--ce-input-bg--hover);
 }
+
+#exportActionsButtons > button {
+    font-weight: 600;
+    color: #ffffff;
+}
+
+#exportActionsButtons > #export-conversations-button {
+    padding: 0.5em 1.5em;
+    background: var(--ce-export-button-bg);
+}
+
+#exportActionsButtons > #export-conversations-button:hover {
+    background: var(--ce-export-button-bg--hover);
+}
+
+#exportActionsButtons > #delete-conversations-button {
+    padding: 0.5em 1em;
+    background: var(--ce-delete-button-bg);
+}
+
+#exportActionsButtons > #delete-conversations-button:hover {
+    background: var(--ce-delete-button-bg--hover);
+}   
