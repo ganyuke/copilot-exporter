@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         M365 Copilot Exporter
 // @namespace    ganyuke
-// @version      2.0.2
+// @version      2.0.3
 // @author       ganyuke
 // @description  View, bulk delete, and export your Microsoft 365 Copilot Chat conversations into raw JSON, readable Markdown, or ChatGPT's conversation.json format.
 // @license      MIT
@@ -9,11 +9,21 @@
 // @source       https://github.com/ganyuke/copilot-exporter.git
 // @match        https://m365.cloud.microsoft/*
 // @grant        GM.registerMenuCommand
+// @grant        GM_addStyle
 // @run-at       document-end
 // ==/UserScript==
 
 (function() {
 	"use strict";
+	var s = new Set();
+	var _css = async (t) => {
+		if (s.has(t)) return;
+		s.add(t);
+		((c) => {
+			if (typeof GM_addStyle === "function") GM_addStyle(c);
+			else (document.head || document.documentElement).appendChild(document.createElement("style")).append(c);
+		})(t);
+	};
 	var __create = Object.create;
 	var __defProp = Object.defineProperty;
 	var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -31,7 +41,7 @@
 		}
 		return to;
 	};
-	var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", {
+	var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(isNodeMode || !mod || !mod.__esModule || !__hasOwnProp.call(mod, "default") ? __defProp(target, "default", {
 		value: mod,
 		enumerable: true
 	}) : target, mod));
@@ -485,9 +495,10 @@
 			var prevCodePoint = null;
 			for (var i = 0; i < charLength; i++) {
 				codePoint = string.charCodeAt(i);
-				if (isLowSurrogate(codePoint)) if (prevCodePoint != null && isHighSurrogate(prevCodePoint)) byteLength += 1;
-				else byteLength += 3;
-				else if (codePoint <= 127) byteLength += 1;
+				if (isLowSurrogate(codePoint)) {
+					if (prevCodePoint != null && isHighSurrogate(prevCodePoint)) byteLength += 1;
+					else byteLength += 3;
+				} else if (codePoint <= 127) byteLength += 1;
 				else if (codePoint >= 128 && codePoint <= 2047) byteLength += 2;
 				else if (codePoint >= 2048 && codePoint <= 65535) byteLength += 3;
 				prevCodePoint = codePoint;
@@ -698,12 +709,12 @@
 		"name": "ganyuke",
 		"url": "https://github.com/ganyuke"
 	};
-	var version = "2.0.2";
+	var version = "2.0.3";
 	var repository = {
 		"type": "git",
 		"url": "https://github.com/ganyuke/copilot-exporter.git"
 	};
-	var styles_default = "#copilotExportOverlay{--ce-bg:#fff;--ce-text:#111;--ce-muted:#666;--ce-border:#ccc;--ce-header-bg:lavender;--ce-row-border:#e5e7eb;--ce-input-bg:#ebebeb;--ce-input-bg--hover:#c8c8c8de;--ce-accent:darkorchid;--ce-error:#dc2626;--ce-status-exporting:#ca8a04;--ce-status-exported:#16a34a;--ce-status-deleting:#ca8a04;--ce-status-deleted:#6b7280;--ce-status-error:#dc2626;z-index:9999;background:#00000080;justify-content:center;align-items:center;display:flex;position:fixed;inset:0}[data-color-scheme=dark] #copilotExportOverlay{--ce-bg:#1e1e1e;--ce-text:#f3f4f6;--ce-muted:#9ca3af;--ce-border:#404040;--ce-header-bg:#2d2d3a;--ce-row-border:#404040;--ce-input-bg:#2d2d2d;--ce-input-bg--hover:#3d3d3d;--ce-accent:#c084fc;--ce-error:#f87171;--ce-status-exporting:#ca8a04;--ce-status-exported:#16a34a;--ce-status-deleting:#ca8a04;--ce-status-deleted:#9ca3af;--ce-status-error:#f87171}#copilotExportModal{background:var(--ce-bg);color:var(--ce-text);--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light dark;border-radius:8px;width:90vw;max-width:800px;padding:20px;font-family:sans-serif;box-shadow:0 4px 10px #0003}@media (prefers-color-scheme:dark){#copilotExportModal{--lightningcss-light: ;--lightningcss-dark:initial}}#copilotExportTitle{margin:0}#copilotExportByline{color:var(--ce-accent);margin:.5rem 0}#copilotExportByline a{color:inherit}#chatTableContainer{border:1px solid var(--ce-border);margin:1em 0;padding:.5em}#chatTableToolbar{margin-bottom:.5em}#toolbarSelectRow{justify-content:space-between;align-items:center;font-size:.875em;display:flex}#toolbarFetchRow{align-items:center;gap:.5em;margin-top:.5em;font-size:.875em;display:flex}#toolbarFetchRow label{flex:1}#selectedCount{color:var(--ce-muted);font-size:.875em}#chatTableScroll{max-height:50vh;overflow:hidden auto}#chatTable{border-collapse:collapse;table-layout:fixed;width:100%}#chatTable col:first-child{width:32px}#chatTable col:nth-child(2){width:38%}#chatTable col:nth-child(3),#chatTable col:nth-child(4){width:22%}#chatTable col:nth-child(5){width:18%}#chatTable thead{position:sticky;top:0}#chatTable thead tr{background:var(--ce-header-bg);font-size:.875em}#chatTable th,#chatTable td{padding:4px 8px}#chatTable th{text-align:left}#chatTable tbody tr{border-bottom:1px solid var(--ce-row-border)}#chatTableBody .name-cell{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}#chatTableBody .date-cell{font-size:.875em}#chatTableBody td.placeholder{color:var(--ce-muted);padding:8px}#chatTableBody td.error-text{color:var(--ce-error);padding:8px}#chatTableBody td.status-cell[data-status=exporting]{color:var(--ce-status-exporting)}#chatTableBody td.status-cell[data-status=exported]{color:var(--ce-status-exported)}#chatTableBody td.status-cell[data-status=deleting]{color:var(--ce-status-deleting)}#chatTableBody td.status-cell[data-status=deleted]{color:var(--ce-status-deleted)}#chatTableBody td.status-cell[data-status=error]{color:var(--ce-status-error)}#exportActions{justify-content:space-between;align-items:center;gap:.5em;display:flex}#exportActionsFormats,#exportActionsButtons{align-items:center;gap:.5em;display:flex}#convertSection{margin-top:1em}#convertHelp{color:var(--ce-muted);margin:0 0 .5em;font-size:.8125em}#convert-format-select{margin-right:.5em}#chat-export-progress-bar-container{flex-direction:column;margin-top:.5em;display:flex}#chat-export-progress-label{display:flex}#chat-export-progress-title{flex-grow:1}#copilotExportOverlay select,#copilotExportOverlay input[type=number],#copilotExportOverlay button{background:var(--ce-input-bg);color:var(--ce-text);border:1px solid var(--ce-border)}#copilotExportOverlay select:hover,#copilotExportOverlay input[type=number]:hover,#copilotExportOverlay button:hover{background:var(--ce-input-bg--hover)}";
+	_css("#copilotExportOverlay{--ce-bg:#fff;--ce-text:#111;--ce-muted:#666;--ce-border:#ccc;--ce-header-bg:lavender;--ce-row-border:#e5e7eb;--ce-input-bg:#ebebeb;--ce-input-bg--hover:#c8c8c8de;--ce-accent:darkorchid;--ce-error:#dc2626;--ce-status-exporting:#ca8a04;--ce-status-exported:#16a34a;--ce-status-deleting:#ca8a04;--ce-status-deleted:#6b7280;--ce-status-error:#dc2626;--ce-export-button-bg:#0078d4;--ce-export-button-bg--hover:#106ebe;--ce-delete-button-bg:#dc2626;--ce-delete-button-bg--hover:#b91c1c;z-index:9999;background:#00000080;justify-content:center;align-items:center;display:flex;position:fixed;inset:0}[data-color-scheme=dark] #copilotExportOverlay{--ce-bg:#1e1e1e;--ce-text:#f3f4f6;--ce-muted:#9ca3af;--ce-border:#404040;--ce-header-bg:#2d2d3a;--ce-row-border:#404040;--ce-input-bg:#2d2d2d;--ce-input-bg--hover:#3d3d3d;--ce-accent:#c084fc;--ce-error:#f87171;--ce-status-exporting:#ca8a04;--ce-status-exported:#16a34a;--ce-status-deleting:#ca8a04;--ce-status-deleted:#9ca3af;--ce-status-error:#f87171}#copilotExportModal{background:var(--ce-bg);color:var(--ce-text);--lightningcss-light:initial;--lightningcss-dark: ;color-scheme:light dark;border-radius:8px;width:90vw;max-width:800px;padding:20px;font-family:sans-serif;box-shadow:0 4px 10px #0003}@media (prefers-color-scheme:dark){#copilotExportModal{--lightningcss-light: ;--lightningcss-dark:initial}}#copilotExportTitle{margin:0}#copilotExportByline{color:var(--ce-accent);margin:.5rem 0}#copilotExportByline a{color:inherit}#chatTableContainer{border:1px solid var(--ce-border);margin:1em 0;padding:.5em}#chatTableToolbar{margin-bottom:.5em}#toolbarSelectRow{justify-content:space-between;align-items:center;font-size:.875em;display:flex}#toolbarFetchRow{align-items:center;gap:.5em;margin-top:.5em;font-size:.875em;display:flex}#toolbarFetchRow label{flex:1}#selectedCount{color:var(--ce-muted);font-size:.875em}#chatTableScroll{max-height:50vh;overflow:hidden auto}#chatTable{border-collapse:collapse;table-layout:fixed;width:100%}#chatTable col:first-child{width:32px}#chatTable col:nth-child(2){width:38%}#chatTable col:nth-child(3),#chatTable col:nth-child(4){width:22%}#chatTable col:nth-child(5){width:18%}#chatTable thead{position:sticky;top:0}#chatTable thead tr{background:var(--ce-header-bg);font-size:.875em}#chatTable th,#chatTable td{padding:4px 8px}#chatTable th{text-align:left}#chatTable tbody tr{border-bottom:1px solid var(--ce-row-border)}#chatTableBody .name-cell{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}#chatTableBody .date-cell{font-size:.875em}#chatTableBody td.placeholder{color:var(--ce-muted);padding:8px}#chatTableBody td.error-text{color:var(--ce-error);padding:8px}#chatTableBody td.status-cell[data-status=exporting]{color:var(--ce-status-exporting)}#chatTableBody td.status-cell[data-status=exported]{color:var(--ce-status-exported)}#chatTableBody td.status-cell[data-status=deleting]{color:var(--ce-status-deleting)}#chatTableBody td.status-cell[data-status=deleted]{color:var(--ce-status-deleted)}#chatTableBody td.status-cell[data-status=error]{color:var(--ce-status-error)}#exportActions{justify-content:space-between;align-items:center;gap:.5em;display:flex}#exportActionsButtons{align-items:center;gap:.5em;display:flex}#convertSection{margin-top:1em}.ce-action-help-text{color:var(--ce-muted);margin:0 0 .5em;font-size:.8125em}#chat-export-progress-bar-container{flex-direction:column;margin-top:.5em;display:flex}#chat-export-progress-label{display:flex}#chat-export-progress-title{flex-grow:1}#copilotExportOverlay select,#copilotExportOverlay input[type=number],#copilotExportOverlay button{background:var(--ce-input-bg);color:var(--ce-text);border:1px solid var(--ce-border)}#copilotExportOverlay select:hover,#copilotExportOverlay input[type=number]:hover,#copilotExportOverlay button:hover{background:var(--ce-input-bg--hover)}#exportActionsButtons>button{color:#fff;font-weight:600}#exportActionsButtons>#export-conversations-button{background:var(--ce-export-button-bg);padding:.5em 1.5em}#exportActionsButtons>#export-conversations-button:hover{background:var(--ce-export-button-bg--hover)}#exportActionsButtons>#delete-conversations-button{background:var(--ce-delete-button-bg);padding:.5em 1em}#exportActionsButtons>#delete-conversations-button:hover{background:var(--ce-delete-button-bg--hover)}");
 	var STATUS_LABELS = {
 		exporting: "exporting…",
 		exported: "exported",
@@ -730,9 +741,6 @@
 		overlay.addEventListener("click", () => {
 			overlay.remove();
 		});
-		const style = document.createElement("style");
-		style.textContent = styles_default;
-		overlay.appendChild(style);
 		const modal = document.createElement("div");
 		modal.id = "copilotExportModal";
 		modal.addEventListener("click", (e) => {
@@ -781,6 +789,9 @@
 
     <div id="exportActions">
       <div id="exportActionsFormats">
+        <p class="ce-action-help-text">
+            Select the format and output mode for the exported conversations.
+        </p>
         <select id="export-format-select">
           <option value="json">Copilot JSON</option>
           <option value="markdown">Markdown</option>
@@ -793,13 +804,13 @@
         </select>
       </div>
       <div id="exportActionsButtons">
-        <button id="delete-conversations-button">Delete</button>
         <button id="export-conversations-button">Export</button>
+        <button id="delete-conversations-button">Delete</button>
       </div>
     </div>
 
     <div id="convertSection">
-      <p id="convertHelp">
+      <p class="ce-action-help-text">
         Re-import and convert exported Copilot JSON files to other formats.
       </p>
       <input type="file" id="copilot-json-upload" accept=".json,application/json" multiple hidden>
