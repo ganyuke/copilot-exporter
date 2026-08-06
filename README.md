@@ -16,8 +16,8 @@ View, bulk delete, and export your Microsoft 365 Copilot Chat conversations into
 Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh)'s [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter).
 
 <div style="display:flex">
-  <img width="45%" src="https://github.com/user-attachments/assets/69b8b899-2c17-4e86-ba88-ff5ae9e3d90b" alt="Copilot Exporter's modal">
-  <img width="45%" src="https://github.com/user-attachments/assets/eeba7e06-0b69-4798-a020-9cead94a11a1" alt="Copilot Exporter after bulk deleting three conversations" >
+  <img width="45%" src="https://github.com/user-attachments/assets/feb02fbf-d917-4c3c-80ac-5b34018e238e" alt="Copilot Exporter's modal">
+  <img width="45%" src="https://github.com/user-attachments/assets/210903c0-84ef-4939-a410-aa508f97d08b" alt="Copilot Exporter after bulk deleting three conversations" >
 </div>
 
 > [!CAUTION]
@@ -25,7 +25,7 @@ Exporter design and functionality based on [@Pionxzh](https://github.com/pionxzh
 
 ## Features
 
-- View, bulk export, and bulk delete your conversations in Microsoft 365 Copilot Chat ([m365.cloud.microsoft](https://m365.cloud.microsoft)).
+- View, bulk export, and bulk delete your conversations in Microsoft 365 Copilot Chat ([m365.cloud.microsoft](https://m365.cloud.microsoft)) with dark mode support.
 - Choose from three export formats: **Copilot JSON**, **Markdown** (with citations!), or **ChatGPT JSON** (with options for each to export as single file like `conversations.json` or as a ZIP).
 - Convert your Copilot converstions into ChatGPT's `conversations.json` format for import into ChatGPT formatting tools (e.g. [ChatGPT Exporter](https://github.com/pionxzh/chatgpt-exporter)).
 
