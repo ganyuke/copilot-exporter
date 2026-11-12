@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         M365 Copilot Exporter
 // @namespace    ganyuke
-// @version      2.0.3
+// @version      2.0.4
 // @author       ganyuke
 // @description  View, bulk delete, and export your Microsoft 365 Copilot Chat conversations into raw JSON, readable Markdown, or ChatGPT's conversation.json format.
 // @license      MIT
 // @icon         https://upload.wikimedia.org/wikipedia/commons/0/0e/Microsoft_365_%282022%29.svg
 // @source       https://github.com/ganyuke/copilot-exporter.git
 // @match        https://m365.cloud.microsoft/*
+// @match        https://copilot.cloud.microsoft/*
 // @grant        GM.registerMenuCommand
 // @grant        GM_addStyle
 // @run-at       document-end
@@ -30,7 +31,7 @@
 	var __getOwnPropNames = Object.getOwnPropertyNames;
 	var __getProtoOf = Object.getPrototypeOf;
 	var __hasOwnProp = Object.prototype.hasOwnProperty;
-	var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod), cb = null), mod.exports);
+	var __commonJSMin = (cb, mod) => () => (mod || (cb((mod = { exports: {} }).exports, mod, mod.exports), cb = null), mod.exports);
 	var __copyProps = (to, from, except, desc) => {
 		if (from && typeof from === "object" || typeof from === "function") for (var keys = __getOwnPropNames(from), i = 0, n = keys.length, key; i < n; i++) {
 			key = keys[i];
@@ -99,7 +100,7 @@
 			console.debug(response.body);
 			throw new Error(`Fetch failed with status ${response.status}`);
 		}
-		return await response.blob();
+		return await response.json();
 	}
 	async function deleteCopilotConversation(token, userOid, tenantId, conversationIds) {
 		const requestObj = {
@@ -309,10 +310,10 @@
 			next = opts;
 			opts = {};
 		}
-		var i = 256, j, k, offset = 0, crcTable = [], cd = "", out = [], outLen = 0, CompressionStream = window.CompressionStream, now = Date.now(), push = (arr) => {
+		var i = 256, j, k, offset = 0, crcTable = [], cd = "", out = [], outLen = 0, now = Date.now(), push = (arr) => {
 			out.push(arr);
 			outLen += arr.length;
-		}, dosDate = (date) => Math.max(2162688, date.getSeconds() >> 1 | date.getMinutes() << 5 | date.getHours() << 11 | date.getDate() << 16 | date.getMonth() + 1 << 21 | date.getFullYear() - 1980 << 25), le16 = (n) => String.fromCharCode(n & 255, n >>> 8 & 255), le32 = (n) => le16(n) + le16(n >>> 16), toUint = (str) => {
+		}, dosMin = 2162688, dosMax = 4288659325, dosDate = (date) => (date = (date.getSeconds() >> 1 | date.getMinutes() << 5 | date.getHours() << 11 | date.getDate() << 16 | date.getMonth() + 1 << 21) + (date.getFullYear() - 1980) * 33554432, date < dosMin ? dosMin : date > dosMax ? dosMax : date), le16 = (n) => String.fromCharCode(n & 255, n >>> 8 & 255), le32 = (n) => le16(n) + le16(n >>> 16), toUint = (str) => {
 			for (var pos = str.length, arr = new Uint8Array(pos); pos--; arr[pos] = str.charCodeAt(pos));
 			return arr;
 		}, toUtf8 = (str) => unescape(encodeURIComponent(str || "")), compress = (uint, len, cb) => {
@@ -339,14 +340,15 @@
 			for (j = 0; j < fileLen;) crc = crc >>> 8 ^ crcTable[(crc ^ file[j++]) & 255];
 			compress(file, fileLen, (compressed, method) => {
 				method = file === compressed ? "\0\0" : "\b\0";
-				method = le32(134217748) + method + le32(dosDate(new Date(k.time > 0 || k.time === 0 ? k.time : now))) + le32(-1 ^ crc >>> 0) + le32(compressed.length) + le32(fileLen) + le32(nameLen);
+				method = le32(134217748) + method + le32(dosDate(new Date(k.time || k.time === 0 ? k.time : now))) + le32(-1 ^ crc >>> 0) + le32(compressed.length) + le32(fileLen) + le32(nameLen);
 				push(toUint("PK" + method + name));
 				push(compressed);
-				cd += "PK\0" + method + "\0\0" + le32(0) + le32(32) + le32(offset) + name;
+				cd += "PK\0" + method + "\0\0" + le32(0) + le32(2175008800) + le32(offset) + name;
 				offset += 30 + compressed.length + nameLen;
 				add(resolve);
 			});
 		};
+		files = files.filter((e) => e);
 		for (; i; crcTable[i] = k) {
 			k = --i;
 			for (j = 8; j--;) k = 3988292384 * (1 & k) ^ k >>> 1;
@@ -516,17 +518,20 @@
 		var illegalRe = /[\/\?<>\\:\*\|"]/g;
 		var controlRe = /[\x00-\x1f\x80-\x9f]/g;
 		var reservedRe = /^\.+$/;
-		var windowsReservedRe = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])(\..*)?$/i;
+		var windowsReservedRe = /^(con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3])(\..*)?$/i;
 		function replaceTrailingDotsAndSpaces(str, replacement) {
 			var end = str.length;
 			while (end > 0 && (str[end - 1] === "." || str[end - 1] === " ")) end--;
-			return end < str.length ? str.slice(0, end) + replacement : str;
+			if (end === str.length) return str;
+			if (typeof replacement === "function") return str.slice(0, end) + replacement(str.slice(end), end, str);
+			return str.slice(0, end) + replacement;
 		}
 		function sanitize(input, replacement) {
 			if (typeof input !== "string") throw new Error("Input must be string");
 			var sanitized = input.replace(illegalRe, replacement).replace(controlRe, replacement).replace(reservedRe, replacement).replace(windowsReservedRe, replacement);
 			sanitized = replaceTrailingDotsAndSpaces(sanitized, replacement);
-			return truncate(sanitized, 255);
+			sanitized = truncate(sanitized, 255);
+			return replaceTrailingDotsAndSpaces(sanitized, "").replace(windowsReservedRe, "");
 		}
 		module.exports = function(input, options) {
 			var replacement = options && options.replacement || "";
@@ -582,10 +587,6 @@
 			...msalIds
 		};
 	}
-	async function fetchConversation(token, localAccountId, tenantId, conversationId) {
-		const blob = await fetchCopilotConversation(token, localAccountId, tenantId, conversationId);
-		return JSON.parse(await blob.text());
-	}
 	async function exportIndividual(conversationIds, callback, format, token, localAccountId, tenantId) {
 		let successCount = 0;
 		for (let i = 0; i < conversationIds.length; i++) {
@@ -595,7 +596,7 @@
 				index: i
 			});
 			try {
-				const conversation = await fetchConversation(token, localAccountId, tenantId, conversationId);
+				const conversation = await fetchCopilotConversation(token, localAccountId, tenantId, conversationId);
 				downloadBlobAsFile(conversationToBlob(conversation, format), exportFilename(conversation, format));
 				console.log(`${APP_TAG} Completed download for conversation ${conversationId}`);
 				callback({
@@ -627,7 +628,7 @@
 				index: i
 			});
 			try {
-				const conversation = await fetchConversation(token, localAccountId, tenantId, conversationId);
+				const conversation = await fetchCopilotConversation(token, localAccountId, tenantId, conversationId);
 				combined.push(conversationToCombinedEntry(conversation, format));
 				console.log(`${APP_TAG} Completed export for conversation ${conversationId}`);
 				callback({
@@ -660,7 +661,7 @@
 				index: i
 			});
 			try {
-				const conversation = await fetchConversation(token, localAccountId, tenantId, conversationId);
+				const conversation = await fetchCopilotConversation(token, localAccountId, tenantId, conversationId);
 				const blob = conversationToBlob(conversation, format);
 				files.push({
 					name: exportFilename(conversation, format),
@@ -709,7 +710,7 @@
 		"name": "ganyuke",
 		"url": "https://github.com/ganyuke"
 	};
-	var version = "2.0.3";
+	var version = "2.0.4";
 	var repository = {
 		"type": "git",
 		"url": "https://github.com/ganyuke/copilot-exporter.git"
