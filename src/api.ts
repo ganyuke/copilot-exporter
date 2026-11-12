@@ -217,7 +217,7 @@ export async function fetchCopilotConversation(
         throw new Error(`Fetch failed with status ${response.status}`);
     }
 
-    return await response.blob();
+    return await response.json() as CopilotConversation;
 }
 
 export async function deleteCopilotConversation(

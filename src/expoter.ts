@@ -95,15 +95,6 @@ async function getTokenAndIds() {
     };
 }
 
-async function fetchConversation(
-    token: string,
-    localAccountId: string,
-    tenantId: string,
-    conversationId: string,
-): Promise<CopilotConversation> {
-    const blob = await fetchCopilotConversation(token, localAccountId, tenantId, conversationId);
-    return JSON.parse(await blob.text()) as CopilotConversation;
-}
 
 async function exportIndividual(
     conversationIds: string[],
@@ -119,7 +110,7 @@ async function exportIndividual(
         const conversationId = conversationIds[i];
         callback({ phase: 'start', index: i });
         try {
-            const conversation = await fetchConversation(token, localAccountId, tenantId, conversationId);
+            const conversation = await fetchCopilotConversation(token, localAccountId, tenantId, conversationId);
             const exportBlob = conversationToBlob(conversation, format);
             downloadBlobAsFile(exportBlob, exportFilename(conversation, format));
             console.log(`${APP_TAG} Completed download for conversation ${conversationId}`);
@@ -153,7 +144,7 @@ async function exportCombined(
         const conversationId = conversationIds[i];
         callback({ phase: 'start', index: i });
         try {
-            const conversation = await fetchConversation(token, localAccountId, tenantId, conversationId);
+            const conversation = await fetchCopilotConversation(token, localAccountId, tenantId, conversationId);
             combined.push(conversationToCombinedEntry(conversation, format));
             console.log(`${APP_TAG} Completed export for conversation ${conversationId}`);
             callback({ phase: 'success', index: i });
@@ -191,7 +182,7 @@ async function exportZip(
         const conversationId = conversationIds[i];
         callback({ phase: 'start', index: i });
         try {
-            const conversation = await fetchConversation(token, localAccountId, tenantId, conversationId);
+            const conversation = await fetchCopilotConversation(token, localAccountId, tenantId, conversationId);
             const blob = conversationToBlob(conversation, format);
             files.push({
                 name: exportFilename(conversation, format),
